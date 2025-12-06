@@ -123,54 +123,58 @@ class CreatureViewport {
   }
 
   _buildStudioLighting(group) {
-    const keySpot = new THREE.SpotLight(0xffffff, 1.9, 40, Math.PI / 4.5, 0.38, 1);
-    keySpot.position.set(8, 10, 7);
+    const keySpot = new THREE.SpotLight(0xffffff, 2.6, 42, Math.PI / 3.7, 0.4, 1);
+    keySpot.position.set(7.5, 10.5, 6.5);
     keySpot.castShadow = true;
     keySpot.shadow.mapSize.set(2048, 2048);
     keySpot.target.position.set(0, 1, 0);
     group.add(keySpot);
     group.add(keySpot.target);
 
-    const fillSpot = new THREE.SpotLight(0xffffff, 1.35, 35, Math.PI / 4.2, 0.48, 1);
-    fillSpot.position.set(-8, 9, 5);
+    const fillSpot = new THREE.SpotLight(0xe8f0ff, 2.0, 38, Math.PI / 3.6, 0.5, 1);
+    fillSpot.position.set(-8.5, 9.5, 5.5);
     fillSpot.castShadow = true;
     fillSpot.shadow.mapSize.set(1024, 1024);
     fillSpot.target.position.set(0, 1, 0);
     group.add(fillSpot);
     group.add(fillSpot.target);
 
-    const rimSpot = new THREE.SpotLight(0xbcd8ff, 1.05, 45, Math.PI / 3.8, 0.32, 1);
-    rimSpot.position.set(0, 11, -9);
+    const rimSpot = new THREE.SpotLight(0xbcd8ff, 1.45, 48, Math.PI / 3.5, 0.32, 1);
+    rimSpot.position.set(0, 11.5, -9);
     rimSpot.castShadow = true;
     rimSpot.shadow.mapSize.set(1024, 1024);
     rimSpot.target.position.set(0, 1, 0);
     group.add(rimSpot);
     group.add(rimSpot.target);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
-    group.add(ambient);
+    const studioAmbient = new THREE.AmbientLight(0xffffff, 0.95);
+    group.add(studioAmbient);
+
+    const skyFill = new THREE.HemisphereLight(0xf5f8ff, 0x1e2533, 0.65);
+    skyFill.position.set(0, 8, 0);
+    group.add(skyFill);
   }
 
   _buildAllAroundLighting(group) {
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x2c3a52, 1.75);
-    hemi.position.set(0, 6, 0);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x2c3a52, 2.6);
+    hemi.position.set(0, 7, 0);
     group.add(hemi);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+    const ambient = new THREE.AmbientLight(0xffffff, 1.25);
     group.add(ambient);
 
-    const north = new THREE.DirectionalLight(0xf5f8ff, 0.95);
-    north.position.set(0, 10, 6);
+    const north = new THREE.DirectionalLight(0xf5f8ff, 1.45);
+    north.position.set(0, 12, 6);
     north.castShadow = true;
     north.shadow.mapSize.set(1024, 1024);
     group.add(north);
 
-    const west = new THREE.DirectionalLight(0xf5f8ff, 0.75);
-    west.position.set(-6, 8, -4);
+    const west = new THREE.DirectionalLight(0xf5f8ff, 1.1);
+    west.position.set(-6.5, 9, -3.5);
     group.add(west);
 
-    const east = new THREE.DirectionalLight(0xf5f8ff, 0.65);
-    east.position.set(6, 8, -4);
+    const east = new THREE.DirectionalLight(0xf5f8ff, 1.0);
+    east.position.set(6.5, 9, -3.5);
     group.add(east);
   }
 
