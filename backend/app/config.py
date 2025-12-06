@@ -2,12 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from pydantic import Field
-
-try:
-    # Pydantic v2 style (BaseSettings moved to pydantic_settings)
-    from pydantic_settings import BaseSettings  # type: ignore
-except Exception:  # pragma: no cover - fallback for Pydantic v1
-    from pydantic import BaseSettings  # type: ignore
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
