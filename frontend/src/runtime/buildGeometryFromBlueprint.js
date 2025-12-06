@@ -56,7 +56,14 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
 
     const generatorName = partRef.generator;
     const chainName = partRef.chain;
-    if (!generatorName || !chainName) {
+    const hasGenerator = typeof generatorName === "string" && generatorName.length > 0;
+    const hasChain = typeof chainName === "string" && chainName.length > 0;
+
+    if (!hasGenerator || !hasChain) {
+      const isEmptyPart = Object.keys(partRef).length === 0;
+      if (isEmptyPart) {
+        continue;
+      }
       // Skip incomplete entries.
       // eslint-disable-next-line no-console
       console.warn("[buildGeometryFromBlueprint] Missing generator or chain for part", partName);
@@ -171,7 +178,6 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       typeof surfaceConfig.metallic === "number"
         ? surfaceConfig.metallic
         : 0.0,
-    skinning: true,
   });
 
   const mesh = new THREE.SkinnedMesh(mergedGeometry, material);

@@ -15,7 +15,7 @@ import { buildGeometryFromBlueprint } from "./buildGeometryFromBlueprint.js";
  */
 export function createCreatureFromBlueprint(blueprint, options = {}) {
   const skeletonResult = buildSkeletonFromBlueprint(blueprint);
-  const { root: skeletonRoot, bones, skeleton } = skeletonResult;
+  const { root: skeletonRootGroup, bones, skeleton, skeletonRoot } = skeletonResult;
 
   const { mesh } = buildGeometryFromBlueprint(blueprint, skeletonResult, options);
 
@@ -31,5 +31,6 @@ export function createCreatureFromBlueprint(blueprint, options = {}) {
     skeleton,
     bones,
     skeletonRoot,
+    skeletonRootGroup,
   };
 }

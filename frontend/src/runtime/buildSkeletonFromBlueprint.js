@@ -59,10 +59,17 @@ export function buildSkeletonFromBlueprint(blueprint) {
 
   const skeleton = new THREE.Skeleton(bones);
 
+  const skeletonRootName = blueprint.skeleton.root;
+  const skeletonRoot =
+    (typeof skeletonRootName === "string" && bonesByName.get(skeletonRootName)) ||
+    bones[0] ||
+    null;
+
   return {
     root: rootGroup,
     bones,
     skeleton,
     bonesByName,
+    skeletonRoot,
   };
 }
