@@ -1,52 +1,45 @@
 # AGENTS.md — CreatureStudio
 
-## Project overview
+This file tells you (the Codex agent) exactly how to run the CreatureStudio
+backend and frontend inside the Codex environment and how to capture a
+preview of the running app using Playwright.
 
-- This repository is a Node.js app called **CreatureStudio**.
-- It uses Node.js and npm for all JavaScript tooling.
-- In Codex Cloud environments, Node.js **20** and npm are already preinstalled.
-- You should **not** try to install Node yourself (no `apt-get install node` etc.).
+The main goals:
 
-## Dev environment expectations
+1. Always use the **preinstalled Node.js 20 and npm** provided by the
+   environment. Do **not** manually install Node.
+2. Start the **FastAPI backend** on port **8000**, bound to `0.0.0.0`.
+3. Start the **Vite frontend** in **preview mode** on port **4173**,
+   bound to `0.0.0.0`, with the `/creaturestudio/` base.
+4. Use `browser_container.run_playwright_script` with
+   `ports_to_forward: [4173, 8000]` and capture a screenshot of
+   `http://127.0.0.1:4173/creaturestudio/`.
 
-When working on this repo in a Codex environment:
-
-- Assume the working directory is the repository root (for example `/workspace/creaturestudio`).
-- Use the **preinstalled Node.js 20** and **npm**:
-  - Use `node -v` and `npm -v` if you need to verify versions.
-- Use **npm**, not yarn or pnpm, unless I explicitly request otherwise.
-
-## Installing dependencies
-
-Whenever your changes might affect dependencies, or before running scripts that need node modules:
-
-1. From the repo root, run:
-
-   ```bash
-   npm install
-# AGENTS.md — CreatureStudio
+---
 
 ## Project overview
 
-- This repository is a Node.js app called **CreatureStudio**.
-- It uses Node.js and npm for all JavaScript tooling.
-- In Codex Cloud environments, Node.js **20** and npm are already preinstalled.
-- You should **not** try to install Node yourself (no `apt-get install node` etc.).
+- Repository name: **CreatureStudio**
+- Backend: **FastAPI** in `backend/`
+- Frontend: **Vite + Three.js** in `frontend/`
+- Shared blueprints: `shared/blueprints/ElephantBlueprint.json` etc.
 
-## Dev environment expectations
+The running system for previews is:
 
-When working on this repo in a Codex environment:
+- Backend API: `http://127.0.0.1:8000`
+- Frontend UI: `http://127.0.0.1:4173/creaturestudio/`
 
-- Assume the working directory is the repository root (for example `/workspace/creaturestudio`).
-- Use the **preinstalled Node.js 20** and **npm**:
-  - Use `node -v` and `npm -v` if you need to verify versions.
-- Use **npm**, not yarn or pnpm, unless I explicitly request otherwise.
+---
 
-## Installing dependencies
+## Environment expectations
 
-Whenever your changes might affect dependencies, or before running scripts that need node modules:
+When working in the Codex environment:
 
-1. From the repo root, run:
+- Assume the working directory is `/workspace/creaturestudio`.
+- The environment configuration already sets **Node.js 20** and **npm**
+  as preinstalled packages.
+- You should be able to run:
 
-   ```bash
-   npm install
+  ```bash
+  node -v
+  npm -v
