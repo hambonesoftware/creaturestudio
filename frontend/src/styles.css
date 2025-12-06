@@ -302,6 +302,37 @@ body {
   overflow: hidden;
 }
 
+.cs-viewport-overlay {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.6rem;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.cs-viewport-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cs-text);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cs-viewport-toggle input {
+  accent-color: var(--cs-accent);
+}
+
 /* Ensure the Three.js canvas fills the viewport container. */
 .cs-center-viewport-placeholder canvas {
   display: block;

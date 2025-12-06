@@ -167,7 +167,68 @@ export function createLayout(rootElement, options = {}) {
 
   const viewportCanvasPlaceholder = document.createElement("div");
   viewportCanvasPlaceholder.className = "cs-center-viewport-placeholder";
+
+  const viewportOverlay = document.createElement("div");
+  viewportOverlay.className = "cs-viewport-overlay";
+
+  const meshToggleLabel = document.createElement("label");
+  meshToggleLabel.className = "cs-viewport-toggle";
+  const meshToggle = document.createElement("input");
+  meshToggle.type = "checkbox";
+  meshToggle.checked = true;
+  meshToggle.addEventListener("change", () => {
+    handleViewportToggleChange();
+  });
+  const meshToggleText = document.createElement("span");
+  meshToggleText.textContent = "Show Mesh";
+  meshToggleLabel.appendChild(meshToggle);
+  meshToggleLabel.appendChild(meshToggleText);
+
+  const skeletonToggleLabel = document.createElement("label");
+  skeletonToggleLabel.className = "cs-viewport-toggle";
+  const skeletonToggle = document.createElement("input");
+  skeletonToggle.type = "checkbox";
+  skeletonToggle.checked = false;
+  skeletonToggle.addEventListener("change", () => {
+    handleViewportToggleChange();
+  });
+  const skeletonToggleText = document.createElement("span");
+  skeletonToggleText.textContent = "Show Skeleton";
+  skeletonToggleLabel.appendChild(skeletonToggle);
+  skeletonToggleLabel.appendChild(skeletonToggleText);
+
+  viewportOverlay.appendChild(meshToggleLabel);
+  viewportOverlay.appendChild(skeletonToggleLabel);
+  viewportCanvasPlaceholder.appendChild(viewportOverlay);
   center.appendChild(viewportCanvasPlaceholder);
+
+  function handleViewportToggleChange() {
+    const { currentBlueprint } = getState();
+    const showMesh = meshToggle.checked;
+    const showSkeleton = skeletonToggle.checked;
+
+    let nextMode = "mesh";
+    if (showMesh && showSkeleton) {
+      nextMode = "both";
+    } else if (showSkeleton && !showMesh) {
+      nextMode = "skeleton";
+    } else if (!showMesh && !showSkeleton) {
+      nextMode = "mesh";
+      meshToggle.checked = true;
+    }
+
+    setViewportMode(nextMode);
+    if (currentBlueprint) {
+      updateViewportFromBlueprint(currentBlueprint);
+    }
+  }
+
+  function syncViewportToggles(mode) {
+    const showMesh = mode === "mesh" || mode === "both";
+    const showSkeleton = mode === "skeleton" || mode === "both";
+    meshToggle.checked = showMesh;
+    skeletonToggle.checked = showSkeleton;
+  }
 
   // Initialize the Three.js viewport inside the placeholder container.
   initCreatureViewport(viewportCanvasPlaceholder);
@@ -230,6 +291,7 @@ export function createLayout(rootElement, options = {}) {
     Object.entries(viewportModeInputs).forEach(([mode, input]) => {
       input.checked = mode === selectedMode;
     });
+    syncViewportToggles(selectedMode);
   });
 
   return {
