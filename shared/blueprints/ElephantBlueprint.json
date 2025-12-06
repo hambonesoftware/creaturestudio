@@ -24,8 +24,17 @@
         "parent": "root",
         "position": [
           0.0,
-          1.8,
+          2.1,
           0.0
+        ]
+      },
+      {
+        "name": "spine_tail",
+        "parent": "spine_base",
+        "position": [
+          0.0,
+          -0.5,
+          -0.35
         ]
       },
       {
@@ -33,8 +42,8 @@
         "parent": "spine_base",
         "position": [
           0.0,
-          1.8,
-          1.0
+          -0.1,
+          1.1
         ]
       },
       {
@@ -42,8 +51,8 @@
         "parent": "spine_mid",
         "position": [
           0.0,
-          1.9,
-          1.8
+          0.3,
+          1.1
         ]
       },
       {
@@ -51,8 +60,8 @@
         "parent": "spine_neck",
         "position": [
           0.0,
-          2.0,
-          2.4
+          0.1,
+          0.6
         ]
       },
       {
@@ -60,17 +69,77 @@
         "parent": "spine_head",
         "position": [
           0.0,
-          2.0,
-          2.9
+          -0.15,
+          0.45
+        ]
+      },
+      {
+        "name": "head_tip_1",
+        "parent": "head",
+        "position": [
+          0.0,
+          -0.05,
+          0.05
+        ]
+      },
+      {
+        "name": "head_tip_2",
+        "parent": "head_tip_1",
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          -0.1745329,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "head_tip_3",
+        "parent": "head_tip_1",
+        "position": [
+          0.3,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          -0.1745329,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "head_tip_4",
+        "parent": "head_tip_1",
+        "position": [
+          -0.3,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          -0.1745329,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "trunk_anchor",
+        "parent": "head_tip_2",
+        "position": [
+          0.0,
+          -0.07,
+          0.15
         ]
       },
       {
         "name": "trunk_root",
-        "parent": "head",
+        "parent": "trunk_anchor",
         "position": [
           0.0,
-          1.95,
-          3.1
+          -0.05,
+          0.4
         ]
       },
       {
@@ -78,8 +147,8 @@
         "parent": "trunk_root",
         "position": [
           0.0,
-          1.9,
-          3.4
+          -0.35,
+          0.25
         ]
       },
       {
@@ -87,8 +156,8 @@
         "parent": "trunk_base",
         "position": [
           0.0,
-          1.8,
-          3.7
+          -0.5,
+          0.1
         ]
       },
       {
@@ -96,8 +165,8 @@
         "parent": "trunk_mid1",
         "position": [
           0.0,
-          1.7,
-          3.9
+          -0.5,
+          0.0
         ]
       },
       {
@@ -105,17 +174,89 @@
         "parent": "trunk_mid2",
         "position": [
           0.0,
-          1.6,
-          4.1
+          -0.4,
+          0.0
+        ]
+      },
+      {
+        "name": "tusk_left",
+        "parent": "head_tip_3",
+        "position": [
+          0.0,
+          0.0,
+          0.25
+        ]
+      },
+      {
+        "name": "tusk_left_tip",
+        "parent": "tusk_left",
+        "position": [
+          0.1,
+          0.3,
+          0.5
+        ]
+      },
+      {
+        "name": "tusk_right",
+        "parent": "head_tip_4",
+        "position": [
+          0.0,
+          0.0,
+          0.25
+        ]
+      },
+      {
+        "name": "tusk_right_tip",
+        "parent": "tusk_right",
+        "position": [
+          -0.1,
+          0.3,
+          0.5
+        ]
+      },
+      {
+        "name": "ear_left",
+        "parent": "head",
+        "position": [
+          0.4,
+          0.1,
+          -0.5
+        ]
+      },
+      {
+        "name": "ear_left_tip",
+        "parent": "ear_left",
+        "position": [
+          0.6,
+          -0.6,
+          -0.4
+        ]
+      },
+      {
+        "name": "ear_right",
+        "parent": "head",
+        "position": [
+          -0.4,
+          0.1,
+          -0.5
+        ]
+      },
+      {
+        "name": "ear_right_tip",
+        "parent": "ear_right",
+        "position": [
+          -0.6,
+          -0.6,
+          -0.4
         ]
       },
       {
         "name": "tail_base",
-        "parent": "spine_base",
+        "parent": "spine_tail",
         "position": [
           0.0,
-          1.7,
-          -0.4
+          0.3,
+          -0.3
         ]
       },
       {
@@ -123,8 +264,8 @@
         "parent": "tail_base",
         "position": [
           0.0,
-          1.6,
-          -0.7
+          -0.6,
+          -0.2
         ]
       },
       {
@@ -132,188 +273,152 @@
         "parent": "tail_mid",
         "position": [
           0.0,
-          1.5,
-          -1.0
+          -0.6,
+          0.0
         ]
       },
       {
-        "name": "ear_left",
-        "parent": "head",
-        "position": [
-          -0.5,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "ear_left_tip",
-        "parent": "ear_left",
-        "position": [
-          -0.9,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "ear_right",
-        "parent": "head",
-        "position": [
-          0.5,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "ear_right_tip",
-        "parent": "ear_right",
-        "position": [
-          0.9,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "front_leg_l_shoulder",
+        "name": "front_left_collarbone",
         "parent": "spine_mid",
         "position": [
-          -0.6,
-          1.7,
-          1.0
+          0.4,
+          -0.3,
+          0.3
         ]
       },
       {
-        "name": "front_leg_l_knee",
-        "parent": "front_leg_l_shoulder",
-        "position": [
-          -0.6,
-          1.0,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_l_ankle",
-        "parent": "front_leg_l_knee",
-        "position": [
-          -0.6,
-          0.5,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_l_foot",
-        "parent": "front_leg_l_ankle",
-        "position": [
-          -0.6,
-          0.0,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_shoulder",
+        "name": "front_right_collarbone",
         "parent": "spine_mid",
         "position": [
-          0.6,
-          1.7,
-          1.0
+          -0.4,
+          -0.3,
+          0.3
         ]
       },
       {
-        "name": "front_leg_r_knee",
-        "parent": "front_leg_r_shoulder",
-        "position": [
-          0.6,
-          1.0,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_ankle",
-        "parent": "front_leg_r_knee",
-        "position": [
-          0.6,
-          0.5,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_foot",
-        "parent": "front_leg_r_ankle",
-        "position": [
-          0.6,
-          0.0,
-          1.0
-        ]
-      },
-      {
-        "name": "back_leg_l_hip",
+        "name": "back_left_pelvis",
         "parent": "spine_base",
         "position": [
-          -0.6,
-          1.7,
-          -0.2
+          0.45,
+          -0.2,
+          0.1
         ]
       },
       {
-        "name": "back_leg_l_knee",
-        "parent": "back_leg_l_hip",
-        "position": [
-          -0.6,
-          1.0,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_l_ankle",
-        "parent": "back_leg_l_knee",
-        "position": [
-          -0.6,
-          0.5,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_l_foot",
-        "parent": "back_leg_l_ankle",
-        "position": [
-          -0.6,
-          0.0,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_hip",
+        "name": "back_right_pelvis",
         "parent": "spine_base",
         "position": [
-          0.6,
-          1.7,
-          -0.2
+          -0.45,
+          -0.2,
+          0.1
         ]
       },
       {
-        "name": "back_leg_r_knee",
-        "parent": "back_leg_r_hip",
+        "name": "front_left_upper",
+        "parent": "front_left_collarbone",
         "position": [
-          0.6,
-          1.0,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_ankle",
-        "parent": "back_leg_r_knee",
-        "position": [
-          0.6,
-          0.5,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_foot",
-        "parent": "back_leg_r_ankle",
-        "position": [
-          0.6,
           0.0,
-          -0.2
+          -0.8,
+          0.0
+        ]
+      },
+      {
+        "name": "front_left_lower",
+        "parent": "front_left_upper",
+        "position": [
+          0.0,
+          -0.8,
+          0.05
+        ]
+      },
+      {
+        "name": "front_left_foot",
+        "parent": "front_left_lower",
+        "position": [
+          0.0,
+          -0.4,
+          0.05
+        ]
+      },
+      {
+        "name": "front_right_upper",
+        "parent": "front_right_collarbone",
+        "position": [
+          0.0,
+          -0.8,
+          0.0
+        ]
+      },
+      {
+        "name": "front_right_lower",
+        "parent": "front_right_upper",
+        "position": [
+          0.0,
+          -0.8,
+          0.05
+        ]
+      },
+      {
+        "name": "front_right_foot",
+        "parent": "front_right_lower",
+        "position": [
+          0.0,
+          -0.4,
+          0.05
+        ]
+      },
+      {
+        "name": "back_left_upper",
+        "parent": "back_left_pelvis",
+        "position": [
+          0.0,
+          -0.8,
+          0.05
+        ]
+      },
+      {
+        "name": "back_left_lower",
+        "parent": "back_left_upper",
+        "position": [
+          0.0,
+          -0.8,
+          -0.1
+        ]
+      },
+      {
+        "name": "back_left_foot",
+        "parent": "back_left_lower",
+        "position": [
+          0.0,
+          -0.4,
+          0.1
+        ]
+      },
+      {
+        "name": "back_right_upper",
+        "parent": "back_right_pelvis",
+        "position": [
+          0.0,
+          -0.8,
+          0.05
+        ]
+      },
+      {
+        "name": "back_right_lower",
+        "parent": "back_right_upper",
+        "position": [
+          0.0,
+          -0.8,
+          -0.1
+        ]
+      },
+      {
+        "name": "back_right_foot",
+        "parent": "back_right_lower",
+        "position": [
+          0.0,
+          -0.4,
+          0.1
         ]
       }
     ]
@@ -321,6 +426,7 @@
   "chains": {
     "spine": [
       "spine_base",
+      "spine_tail",
       "spine_mid",
       "spine_neck",
       "spine_head",
@@ -329,12 +435,19 @@
     "neck": [
       "spine_neck",
       "spine_head",
-      "head"
+      "head",
+      "head_tip_1",
+      "head_tip_2"
     ],
     "head": [
-      "head"
+      "head",
+      "head_tip_1",
+      "head_tip_2",
+      "head_tip_3",
+      "head_tip_4"
     ],
     "trunk": [
+      "trunk_anchor",
       "trunk_root",
       "trunk_base",
       "trunk_mid1",
@@ -355,28 +468,36 @@
       "ear_right_tip"
     ],
     "frontLegL": [
-      "front_leg_l_shoulder",
-      "front_leg_l_knee",
-      "front_leg_l_ankle",
-      "front_leg_l_foot"
+      "front_left_collarbone",
+      "front_left_upper",
+      "front_left_lower",
+      "front_left_foot"
     ],
     "frontLegR": [
-      "front_leg_r_shoulder",
-      "front_leg_r_knee",
-      "front_leg_r_ankle",
-      "front_leg_r_foot"
+      "front_right_collarbone",
+      "front_right_upper",
+      "front_right_lower",
+      "front_right_foot"
     ],
     "backLegL": [
-      "back_leg_l_hip",
-      "back_leg_l_knee",
-      "back_leg_l_ankle",
-      "back_leg_l_foot"
+      "back_left_pelvis",
+      "back_left_upper",
+      "back_left_lower",
+      "back_left_foot"
     ],
     "backLegR": [
-      "back_leg_r_hip",
-      "back_leg_r_knee",
-      "back_leg_r_ankle",
-      "back_leg_r_foot"
+      "back_right_pelvis",
+      "back_right_upper",
+      "back_right_lower",
+      "back_right_foot"
+    ],
+    "tuskLeft": [
+      "tusk_left",
+      "tusk_left_tip"
+    ],
+    "tuskRight": [
+      "tusk_right",
+      "tusk_right_tip"
     ]
   },
   "sizes": {
@@ -414,6 +535,12 @@
       },
       "backLegR": {
         "radius": 0.22
+      },
+      "tuskLeft": {
+        "radius": 0.1
+      },
+      "tuskRight": {
+        "radius": 0.1
       }
     },
     "byBone": {}
@@ -497,6 +624,20 @@
       "options": {
         "side": "right",
         "isFront": false
+      }
+    },
+    "tuskLeft": {
+      "generator": "limb",
+      "chain": "tuskLeft",
+      "options": {
+        "side": "left"
+      }
+    },
+    "tuskRight": {
+      "generator": "limb",
+      "chain": "tuskRight",
+      "options": {
+        "side": "right"
       }
     }
   },
