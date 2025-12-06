@@ -123,5 +123,8 @@ export function updateViewportFromBlueprint(blueprint) {
     displayRoot.scale.set(globalScale, globalScale, globalScale);
   }
 
-  viewportInstance.setCreature(displayRoot);
+  runtime.displayRoot = displayRoot;
+  runtime.skeletonHelper = skeletonHelper;
+
+  viewportInstance.setRuntime(runtime);
 }

@@ -1,18 +1,12 @@
-// Canonical Elephant definition sourced from ElephantV3.5.
-// This replaces the earlier stub and is intended to be the authoritative
-// skeleton for future blueprint generation within CreatureStudio.
-//
-// Notes for future work:
-// - The mapping at the bottom aligns these bone names to the current
-//   ElephantBlueprint skeleton so we can procedurally emit blueprint
-//   skeleton entries or validate coverage.
-// - Bones present here but absent in the blueprint (e.g., tusks, head tips)
-//   map to null to highlight missing geometry in the current blueprint.
-// - Sizes provide rough radii/extent hints for body-part generation.
+// Canonical Elephant definition sourced from the reference Zoo implementation.
+// This file mirrors the golden /elephant/ElephantDefinition.js so that
+// CreatureStudio emits a skeleton compatible with the Zoo project without
+// importing any runtime code from that folder.
 
 export const ElephantDefinition = {
   name: "Elephant",
   variant: "CanonicalV3_5",
+  root: "spine_base",
   bones: [
     // === Main Body Column (The Barrel) ===
     // spine_base = Hips. High up.
@@ -138,56 +132,28 @@ export const ElephantDefinition = {
     back_right_lower: [0.38, 0.38, 0.38],
     back_right_foot: [0.38, 0.25, 0.38],
   },
+
+  chains: {
+    spine: ["spine_base", "spine_mid", "spine_neck", "spine_head", "head"],
+    head: ["head", "head_tip_1", "head_tip_2", "head_tip_3", "head_tip_4"],
+    trunk: ["trunk_anchor", "trunk_root", "trunk_base", "trunk_mid1", "trunk_mid2", "trunk_tip"],
+    tail: ["tail_base", "tail_mid", "tail_tip"],
+    earLeft: ["ear_left", "ear_left_tip"],
+    earRight: ["ear_right", "ear_right_tip"],
+    frontLegL: ["front_left_collarbone", "front_left_upper", "front_left_lower", "front_left_foot"],
+    frontLegR: ["front_right_collarbone", "front_right_upper", "front_right_lower", "front_right_foot"],
+    backLegL: ["back_left_pelvis", "back_left_upper", "back_left_lower", "back_left_foot"],
+    backLegR: ["back_right_pelvis", "back_right_upper", "back_right_lower", "back_right_foot"],
+    tuskLeft: ["tusk_left", "tusk_left_tip"],
+    tuskRight: ["tusk_right", "tusk_right_tip"],
+  },
 };
 
-// Map definition bone names to the existing ElephantBlueprint skeleton names.
-// If a bone is absent from the current blueprint, its value is null to signal
-// potential work for future blueprint generation or mesh support.
-export const ElephantBlueprintBoneMap = {
-  spine_base: "spine_base",
-  spine_tail: null,
-  spine_mid: "spine_mid",
-  spine_neck: "spine_neck",
-  spine_head: "spine_head",
-  head: "head",
-  head_tip_1: null,
-  head_tip_2: null,
-  head_tip_3: null,
-  head_tip_4: null,
-  trunk_anchor: null,
-  trunk_root: "trunk_root",
-  trunk_base: "trunk_base",
-  trunk_mid1: "trunk_mid1",
-  trunk_mid2: "trunk_mid2",
-  trunk_tip: "trunk_tip",
-  tusk_left: null,
-  tusk_left_tip: null,
-  tusk_right: null,
-  tusk_right_tip: null,
-  ear_left: "ear_left",
-  ear_left_tip: "ear_left_tip",
-  ear_right: "ear_right",
-  ear_right_tip: "ear_right_tip",
-  tail_base: "tail_base",
-  tail_mid: "tail_mid",
-  tail_tip: "tail_tip",
-  front_left_collarbone: "front_leg_l_shoulder",
-  front_right_collarbone: "front_leg_r_shoulder",
-  back_left_pelvis: "back_leg_l_hip",
-  back_right_pelvis: "back_leg_r_hip",
-  front_left_upper: "front_leg_l_knee",
-  front_left_lower: "front_leg_l_ankle",
-  front_left_foot: "front_leg_l_foot",
-  front_right_upper: "front_leg_r_knee",
-  front_right_lower: "front_leg_r_ankle",
-  front_right_foot: "front_leg_r_foot",
-  back_left_upper: "back_leg_l_knee",
-  back_left_lower: "back_leg_l_ankle",
-  back_left_foot: "back_leg_l_foot",
-  back_right_upper: "back_leg_r_knee",
-  back_right_lower: "back_leg_r_ankle",
-  back_right_foot: "back_leg_r_foot",
-};
+// Identity mapping between the canonical definition and the blueprint bones.
+export const ElephantBlueprintBoneMap = ElephantDefinition.bones.reduce((acc, bone) => {
+  acc[bone.name] = bone.name;
+  return acc;
+}, {});
 
 /**
  * Future helper: returns an array of mapping tuples so downstream code can

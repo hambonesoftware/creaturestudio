@@ -76,6 +76,8 @@ class CreatureViewport {
 
     // Currently displayed creature root group (if any).
     this.creatureRoot = null;
+    this._activeRuntime = null;
+    this._lastFrameTime = null;
 
     // Animation loop bookkeeping.
     this._running = false;
@@ -164,6 +166,16 @@ class CreatureViewport {
   }
 
   /**
+   * Convenience helper that also stores the runtime update hook.
+   */
+  setRuntime(runtimeResult) {
+    this._activeRuntime = runtimeResult || null;
+    this._lastFrameTime = null;
+    const rootGroup = runtimeResult ? runtimeResult.displayRoot || runtimeResult.root : null;
+    this.setCreature(rootGroup);
+  }
+
+  /**
    * Begin the animation loop.
    */
   start() {
@@ -179,6 +191,7 @@ class CreatureViewport {
    */
   stop() {
     this._running = false;
+    this._lastFrameTime = null;
   }
 
   _scheduleNextFrame() {
@@ -188,9 +201,23 @@ class CreatureViewport {
     window.requestAnimationFrame(this._boundAnimate);
   }
 
-  _animate() {
+  _animate(timestamp) {
     if (!this._running) {
       return;
+    }
+
+    const dt = this._lastFrameTime === null ? 0 : (timestamp - this._lastFrameTime) / 1000;
+    this._lastFrameTime = timestamp;
+
+    if (this._activeRuntime && typeof this._activeRuntime.update === "function") {
+      this._activeRuntime.update(dt);
+    }
+    if (
+      this._activeRuntime &&
+      this._activeRuntime.skeletonHelper &&
+      typeof this._activeRuntime.skeletonHelper.update === "function"
+    ) {
+      this._activeRuntime.skeletonHelper.update();
     }
 
     if (this.controls) {
