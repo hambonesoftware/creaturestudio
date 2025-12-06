@@ -1,4 +1,4 @@
-import { subscribe } from "../studioState.js";
+import { getState, setViewportMode, subscribe } from "../studioState.js";
 import { createBodyPlanPanel } from "./panels/BodyPlanPanel.js";
 import { createSkeletonPanel } from "./panels/SkeletonPanel.js";
 import { createBodyPartsPanel } from "./panels/BodyPartsPanel.js";
@@ -17,7 +17,67 @@ export function createRightSidebarInspector() {
 
   const header = document.createElement("div");
   header.className = "cs-right-sidebar-header";
-  header.textContent = "Inspector";
+
+  const headerTitle = document.createElement("span");
+  headerTitle.className = "cs-right-sidebar-title";
+  headerTitle.textContent = "Inspector";
+  header.appendChild(headerTitle);
+
+  const viewToggle = document.createElement("div");
+  viewToggle.className = "cs-inspector-view-toggle";
+
+  function getToggleFlags(mode) {
+    return {
+      showMesh: mode === "mesh" || mode === "both",
+      showSkeleton: mode === "skeleton" || mode === "both",
+    };
+  }
+
+  const meshToggle = document.createElement("button");
+  meshToggle.type = "button";
+  meshToggle.className = "cs-inspector-toggle";
+  meshToggle.textContent = "Mesh";
+  meshToggle.addEventListener("click", () => {
+    const { viewportMode } = getState();
+    const { showMesh, showSkeleton } = getToggleFlags(viewportMode);
+    const nextShowMesh = !showMesh;
+    const nextShowSkeleton = showSkeleton;
+
+    const nextMode = nextShowMesh && nextShowSkeleton
+      ? "both"
+      : nextShowMesh
+      ? "mesh"
+      : nextShowSkeleton
+      ? "skeleton"
+      : "mesh";
+
+    setViewportMode(nextMode);
+  });
+
+  const skeletonToggle = document.createElement("button");
+  skeletonToggle.type = "button";
+  skeletonToggle.className = "cs-inspector-toggle";
+  skeletonToggle.textContent = "Skeleton";
+  skeletonToggle.addEventListener("click", () => {
+    const { viewportMode } = getState();
+    const { showMesh, showSkeleton } = getToggleFlags(viewportMode);
+    const nextShowMesh = showMesh;
+    const nextShowSkeleton = !showSkeleton;
+
+    const nextMode = nextShowMesh && nextShowSkeleton
+      ? "both"
+      : nextShowMesh
+      ? "mesh"
+      : nextShowSkeleton
+      ? "skeleton"
+      : "mesh";
+
+    setViewportMode(nextMode);
+  });
+
+  viewToggle.appendChild(meshToggle);
+  viewToggle.appendChild(skeletonToggle);
+  header.appendChild(viewToggle);
   container.appendChild(header);
 
   const tabsRow = document.createElement("div");
@@ -74,6 +134,14 @@ export function createRightSidebarInspector() {
     return lastState;
   }
 
+  function updateInspectorViewToggle(mode) {
+    const { showMesh, showSkeleton } = getToggleFlags(mode);
+    meshToggle.classList.toggle("is-active", showMesh);
+    meshToggle.setAttribute("aria-pressed", showMesh ? "true" : "false");
+    skeletonToggle.classList.toggle("is-active", showSkeleton);
+    skeletonToggle.setAttribute("aria-pressed", showSkeleton ? "true" : "false");
+  }
+
   function renderPanels(state) {
     panelsHost.innerHTML = "";
 
@@ -101,6 +169,7 @@ export function createRightSidebarInspector() {
 
   function handleStateChange(state) {
     lastState = state;
+    updateInspectorViewToggle(state.viewportMode);
     renderPanels(state);
   }
 
