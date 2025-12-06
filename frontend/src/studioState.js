@@ -18,6 +18,7 @@ const state = {
   isDirty: false,
   loading: false,
   error: null,
+  viewportMode: "mesh",
 };
 
 const listeners = new Set();
@@ -32,6 +33,7 @@ export function initState() {
   state.isDirty = false;
   state.loading = false;
   state.error = null;
+  state.viewportMode = "mesh";
   notify();
 }
 
@@ -161,6 +163,24 @@ export function setLoading(isLoading) {
 
 export function setError(error) {
   state.error = error ? String(error) : null;
+  notify();
+}
+
+const VALID_VIEWPORT_MODES = new Set(["mesh", "skeleton", "both"]);
+
+/**
+ * Update the viewport visualization mode (mesh / skeleton / both).
+ */
+export function setViewportMode(mode) {
+  if (!VALID_VIEWPORT_MODES.has(mode)) {
+    return;
+  }
+
+  if (state.viewportMode === mode) {
+    return;
+  }
+
+  state.viewportMode = mode;
   notify();
 }
 

@@ -1,5 +1,7 @@
+import * as THREE from "three";
 import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
 import { CreatureViewport } from "./CreatureViewport.js";
+import { getState } from "../studioState.js";
 
 /**
  * Module-level singleton viewport used by the layout and panels.
@@ -77,6 +79,12 @@ export function updateViewportFromBlueprint(blueprint) {
 
   const runtime = createCreatureFromBlueprint(blueprint);
 
+  const { viewportMode = "mesh" } = getState();
+  const creatureName = blueprint.meta && blueprint.meta.name ? blueprint.meta.name : "Creature";
+
+  const displayRoot = new THREE.Group();
+  displayRoot.name = `${creatureName}_DisplayRoot`;
+
   // Optional global scale hook. If the blueprint defines sizes.globalScale,
   // respect it by scaling the creature root uniformly.
   const sizes = blueprint.sizes || {};
@@ -85,9 +93,34 @@ export function updateViewportFromBlueprint(blueprint) {
       ? sizes.globalScale
       : 1.0;
 
-  if (runtime.root && globalScale !== 1.0) {
-    runtime.root.scale.set(globalScale, globalScale, globalScale);
+  const helperTarget = runtime.skeletonRoot || runtime.mesh || runtime.root;
+  let skeletonHelper = null;
+
+  if ((viewportMode === "skeleton" || viewportMode === "both") && helperTarget) {
+    skeletonHelper = new THREE.SkeletonHelper(helperTarget);
+    skeletonHelper.name = `${creatureName}_SkeletonHelper`;
+    if (skeletonHelper.material) {
+      skeletonHelper.material.depthTest = false;
+      skeletonHelper.material.transparent = true;
+      skeletonHelper.material.opacity = 0.9;
+    }
   }
 
-  viewportInstance.setCreature(runtime.root);
+  if (runtime.mesh) {
+    runtime.mesh.visible = viewportMode === "mesh" || viewportMode === "both";
+  }
+
+  if (runtime.root) {
+    displayRoot.add(runtime.root);
+  }
+
+  if (skeletonHelper) {
+    displayRoot.add(skeletonHelper);
+  }
+
+  if (globalScale !== 1.0) {
+    displayRoot.scale.set(globalScale, globalScale, globalScale);
+  }
+
+  viewportInstance.setCreature(displayRoot);
 }

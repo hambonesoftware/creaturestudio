@@ -36,7 +36,7 @@ class CreatureViewport {
     const aspect = width / height;
 
     // Camera setup
-    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 100);
+    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 300);
     this.camera.position.set(6, 4, 8);
     this.camera.lookAt(0, 1, 0);
 
@@ -67,7 +67,7 @@ class CreatureViewport {
     this.controls.dampingFactor = 0.08;
     this.controls.enablePan = true;
     this.controls.minDistance = 2;
-    this.controls.maxDistance = 30;
+    this.controls.maxDistance = 90;
     this.controls.update();
 
     // Lights + ground

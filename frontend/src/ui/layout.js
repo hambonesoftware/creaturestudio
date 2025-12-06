@@ -1,7 +1,10 @@
-import { subscribe, getState } from "../studioState.js";
+import { subscribe, getState, setViewportMode } from "../studioState.js";
 import { createLeftSidebarSpeciesBrowser } from "./leftSidebarSpeciesBrowser.js";
 import { createRightSidebarInspector } from "./rightSidebarInspector.js";
-import { initCreatureViewport } from "../viewport/viewportBridge.js";
+import {
+  initCreatureViewport,
+  updateViewportFromBlueprint,
+} from "../viewport/viewportBridge.js";
 
 /**
  * Create the main CreatureStudio layout inside the given root element.
@@ -117,7 +120,49 @@ export function createLayout(rootElement, options = {}) {
 
   const viewportHeader = document.createElement("div");
   viewportHeader.className = "cs-center-viewport-header";
-  viewportHeader.textContent = "Viewport – 3D Creature Preview";
+
+  const viewportTitle = document.createElement("span");
+  viewportTitle.className = "cs-center-viewport-title";
+  viewportTitle.textContent = "Viewport – 3D Creature Preview";
+  viewportHeader.appendChild(viewportTitle);
+
+  const viewportModeGroup = document.createElement("div");
+  viewportModeGroup.className = "cs-viewport-mode-toggle";
+
+  const viewportModeInputs = {};
+
+  function createViewportModeOption(value, label) {
+    const wrapper = document.createElement("label");
+    wrapper.className = "cs-viewport-mode-option";
+
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "cs-viewport-mode";
+    input.value = value;
+    input.addEventListener("change", () => {
+      if (!input.checked) return;
+      setViewportMode(value);
+      const { currentBlueprint } = getState();
+      if (currentBlueprint) {
+        updateViewportFromBlueprint(currentBlueprint);
+      }
+    });
+
+    const text = document.createElement("span");
+    text.textContent = label;
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(text);
+
+    viewportModeInputs[value] = input;
+    viewportModeGroup.appendChild(wrapper);
+  }
+
+  createViewportModeOption("mesh", "Mesh");
+  createViewportModeOption("skeleton", "Skeleton");
+  createViewportModeOption("both", "Mesh + Skeleton");
+
+  viewportHeader.appendChild(viewportModeGroup);
   center.appendChild(viewportHeader);
 
   const viewportCanvasPlaceholder = document.createElement("div");
@@ -141,7 +186,14 @@ export function createLayout(rootElement, options = {}) {
 
   // Subscribe to studio state updates to refresh header labels.
   const unsubscribe = subscribe((state) => {
-    const { currentBlueprintName, loading, error, isDirty, currentBlueprint } = state;
+    const {
+      currentBlueprintName,
+      loading,
+      error,
+      isDirty,
+      currentBlueprint,
+      viewportMode,
+    } = state;
 
     if (currentBlueprintName) {
       speciesLabel.textContent = `Species: ${currentBlueprintName}`;
@@ -172,6 +224,12 @@ export function createLayout(rootElement, options = {}) {
 
     // Save button is enabled only when we have a blueprint loaded.
     saveButton.disabled = !currentBlueprint;
+
+    // Sync viewport mode radio buttons with state.
+    const selectedMode = viewportModeInputs[viewportMode] ? viewportMode : "mesh";
+    Object.entries(viewportModeInputs).forEach(([mode, input]) => {
+      input.checked = mode === selectedMode;
+    });
   });
 
   return {
