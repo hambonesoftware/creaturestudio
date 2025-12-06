@@ -47,7 +47,7 @@ class CreatureViewport {
     });
     this.renderer.setPixelRatio(window.devicePixelRatio || 1);
     this.renderer.setSize(width, height);
-    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
