@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zoo.creaturestudio/schemas/species_blueprint.schema.json",
+  "title": "SpeciesBlueprint",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/BlueprintMeta"
+    },
+    "bodyPlan": {
+      "$ref": "#/$defs/BodyPlan"
+    },
+    "skeleton": {
+      "$ref": "#/$defs/BlueprintSkeleton"
+    },
+    "chains": {
+      "$ref": "#/$defs/BlueprintChains"
+    },
+    "sizes": {
+      "$ref": "#/$defs/SizesLookup"
+    },
+    "bodyParts": {
+      "$ref": "#/$defs/BodyPartsConfig"
+    },
+    "materials": {
+      "$ref": "#/$defs/MaterialsConfig"
+    },
+    "behaviorPresets": {
+      "$ref": "#/$defs/BehaviorPresets"
+    }
+  },
+  "required": [
+    "meta",
+    "bodyPlan",
+    "skeleton",
+    "chains",
+    "sizes",
+    "bodyParts",
+    "materials",
+    "behaviorPresets"
+  ],
+  "$defs": {
+    "BlueprintMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Species common name (for example, 'Elephant')."
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version of this blueprint."
+        },
+        "author": {
+          "type": "string",
+          "description": "Person or tool that produced this blueprint."
+        },
+        "source": {
+          "type": "string",
+          "description": "Reference back to rulebook chapter or Zoo source."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-form notes about this blueprint."
+        }
+      }
+    },
+    "BodyPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "quadruped",
+            "biped",
+            "winged",
+            "nopeds"
+          ],
+          "description": "High-level body plan classification."
+        },
+        "hasTail": {
+          "type": "boolean",
+          "description": "Whether the animal has a tail chain.",
+          "default": true
+        },
+        "hasTrunk": {
+          "type": "boolean",
+          "description": "Whether the animal has a nose or trunk chain.",
+          "default": false
+        },
+        "hasWings": {
+          "type": "boolean",
+          "description": "Whether the animal has wing chains.",
+          "default": false
+        },
+        "hasEars": {
+          "type": "boolean",
+          "description": "Whether the animal has ear chains.",
+          "default": true
+        },
+        "symmetryMode": {
+          "type": "string",
+          "enum": [
+            "bilateral",
+            "radial",
+            "none"
+          ],
+          "description": "Symmetry assumption used by generators.",
+          "default": "bilateral"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about how this body plan behaves."
+        }
+      }
+    },
+    "Bone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "parent",
+        "position"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique bone identifier within this skeleton."
+        },
+        "parent": {
+          "type": "string",
+          "description": "Parent bone name or 'root' for the logical root."
+        },
+        "position": {
+          "type": "array",
+          "description": "XYZ position in meters in the rig coordinate system.",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "BlueprintSkeleton": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bones"
+      ],
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Name of the logical root bone for this skeleton."
+        },
+        "coordinateSystem": {
+          "type": "string",
+          "description": "Description of the coordinate system (see rulebook chapter 2)."
+        },
+        "bones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Bone"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "BlueprintChains": {
+      "type": "object",
+      "description": "Named anatomical chains mapping to ordered lists of bone names.",
+      "properties": {
+        "spine": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Spine chain from hips to head."
+        },
+        "neck": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Neck chain (typically a subset of the spine)."
+        },
+        "head": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Head chain, usually just the head bone."
+        },
+        "trunk": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Trunk or nose chain."
+        },
+        "tail": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tail chain."
+        },
+        "earLeft": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Left ear chain."
+        },
+        "earRight": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Right ear chain."
+        },
+        "frontLegL": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Front left leg chain from shoulder to foot."
+        },
+        "frontLegR": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Front right leg chain from shoulder to foot."
+        },
+        "backLegL": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Back left leg chain from hip to foot."
+        },
+        "backLegR": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Back right leg chain from hip to foot."
+        }
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "SizeProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radius": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Base radius for this bone or chain."
+        },
+        "radiusTop": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Optional radius at the start of the segment."
+        },
+        "radiusBottom": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Optional radius at the end of the segment."
+        },
+        "lengthScale": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Scale factor applied to the segment length."
+        },
+        "widthScale": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Scale factor applied sideways from the bone."
+        }
+      }
+    },
+    "SizesLookup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "defaultRadius": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Default radius used when nothing more specific is provided."
+        },
+        "byBone": {
+          "type": "object",
+          "description": "Size profiles keyed by bone name.",
+          "additionalProperties": {
+            "$ref": "#/$defs/SizeProfile"
+          }
+        },
+        "byChain": {
+          "type": "object",
+          "description": "Size profiles keyed by chain name.",
+          "additionalProperties": {
+            "$ref": "#/$defs/SizeProfile"
+          }
+        }
+      }
+    },
+    "BodyPartRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "generator",
+        "chain"
+      ],
+      "properties": {
+        "generator": {
+          "type": "string",
+          "description": "Name of the bodyParts generator to use (for example, 'torso')."
+        },
+        "chain": {
+          "type": "string",
+          "description": "Name of the chain this body part should follow."
+        },
+        "options": {
+          "type": "object",
+          "description": "Generator-specific tuning options."
+        }
+      }
+    },
+    "BodyPartsConfig": {
+      "type": "object",
+      "description": "Mapping from body part names to generator configuration.",
+      "properties": {
+        "torso": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "neck": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "head": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "trunk": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "tail": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "earLeft": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "earRight": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "frontLegL": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "frontLegR": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "backLegL": {
+          "$ref": "#/$defs/BodyPartRef"
+        },
+        "backLegR": {
+          "$ref": "#/$defs/BodyPartRef"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/BodyPartRef"
+      }
+    },
+    "MaterialDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{6})$",
+          "description": "Hex sRGB color in the form #rrggbb."
+        },
+        "roughness": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Roughness in the range 0.0 to 1.0."
+        },
+        "metallic": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Metallic factor in the range 0.0 to 1.0."
+        },
+        "specular": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Specular strength in the range 0.0 to 1.0."
+        },
+        "emissive": {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{6})$",
+          "description": "Emissive color as hex sRGB (optional)."
+        }
+      }
+    },
+    "MaterialsConfig": {
+      "type": "object",
+      "description": "Base material configuration for an animal.",
+      "properties": {
+        "surface": {
+          "$ref": "#/$defs/MaterialDefinition"
+        },
+        "eye": {
+          "$ref": "#/$defs/MaterialDefinition"
+        },
+        "tusk": {
+          "$ref": "#/$defs/MaterialDefinition"
+        },
+        "nail": {
+          "$ref": "#/$defs/MaterialDefinition"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/MaterialDefinition"
+      }
+    },
+    "BehaviorPresets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gait": {
+          "type": "string",
+          "description": "Primary locomotion preset for this species."
+        },
+        "idleBehaviors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of idle behaviors the runtime can trigger."
+        },
+        "specialInteractions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "High-level interaction tags such as 'drink_from_pond'."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Arbitrary tags for search and filtering."
+        }
+      }
+    }
+  }
+}
