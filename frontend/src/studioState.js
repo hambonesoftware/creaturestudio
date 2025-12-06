@@ -19,6 +19,7 @@ const state = {
   loading: false,
   error: null,
   viewportMode: "mesh",
+  lightingMode: "allAround",
 };
 
 const listeners = new Set();
@@ -34,6 +35,7 @@ export function initState() {
   state.loading = false;
   state.error = null;
   state.viewportMode = "mesh";
+  state.lightingMode = "allAround";
   notify();
 }
 
@@ -167,6 +169,7 @@ export function setError(error) {
 }
 
 const VALID_VIEWPORT_MODES = new Set(["mesh", "skeleton", "both"]);
+const VALID_LIGHTING_MODES = new Set(["studio", "allAround"]);
 
 /**
  * Update the viewport visualization mode (mesh / skeleton / both).
@@ -181,6 +184,22 @@ export function setViewportMode(mode) {
   }
 
   state.viewportMode = mode;
+  notify();
+}
+
+/**
+ * Update the viewport lighting preset (studio spotlights vs. all-around fill).
+ */
+export function setLightingMode(mode) {
+  if (!VALID_LIGHTING_MODES.has(mode)) {
+    return;
+  }
+
+  if (state.lightingMode === mode) {
+    return;
+  }
+
+  state.lightingMode = mode;
   notify();
 }
 

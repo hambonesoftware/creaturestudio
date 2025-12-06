@@ -1,9 +1,10 @@
-import { subscribe, getState, setViewportMode } from "../studioState.js";
+import { subscribe, getState, setViewportMode, setLightingMode } from "../studioState.js";
 import { createLeftSidebarSpeciesBrowser } from "./leftSidebarSpeciesBrowser.js";
 import { createRightSidebarInspector } from "./rightSidebarInspector.js";
 import {
   initCreatureViewport,
   updateViewportFromBlueprint,
+  setViewportLighting,
 } from "../viewport/viewportBridge.js";
 
 /**
@@ -130,6 +131,7 @@ export function createLayout(rootElement, options = {}) {
   viewportModeGroup.className = "cs-viewport-mode-toggle";
 
   const viewportModeInputs = {};
+  const lightingModeInputs = {};
 
   function createViewportModeOption(value, label) {
     const wrapper = document.createElement("label");
@@ -163,6 +165,42 @@ export function createLayout(rootElement, options = {}) {
   createViewportModeOption("both", "Mesh + Skeleton");
 
   viewportHeader.appendChild(viewportModeGroup);
+
+  const lightingModeGroup = document.createElement("div");
+  lightingModeGroup.className = "cs-viewport-mode-toggle";
+
+  const lightingLabel = document.createElement("span");
+  lightingLabel.textContent = "Lighting:";
+  lightingModeGroup.appendChild(lightingLabel);
+
+  function createLightingModeOption(value, label) {
+    const wrapper = document.createElement("label");
+    wrapper.className = "cs-viewport-mode-option";
+
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "cs-lighting-mode";
+    input.value = value;
+    input.addEventListener("change", () => {
+      if (!input.checked) return;
+      setLightingMode(value);
+      setViewportLighting(value);
+    });
+
+    const text = document.createElement("span");
+    text.textContent = label;
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(text);
+
+    lightingModeInputs[value] = input;
+    lightingModeGroup.appendChild(wrapper);
+  }
+
+  createLightingModeOption("studio", "Studio Spotlights");
+  createLightingModeOption("allAround", "All-Around");
+
+  viewportHeader.appendChild(lightingModeGroup);
   center.appendChild(viewportHeader);
 
   const viewportCanvasPlaceholder = document.createElement("div");
@@ -230,6 +268,14 @@ export function createLayout(rootElement, options = {}) {
     skeletonToggle.checked = showSkeleton;
   }
 
+  function syncLightingMode(mode) {
+    const selectedMode = lightingModeInputs[mode] ? mode : "allAround";
+    Object.entries(lightingModeInputs).forEach(([value, input]) => {
+      input.checked = value === selectedMode;
+    });
+    setViewportLighting(selectedMode);
+  }
+
   // Initialize the Three.js viewport inside the placeholder container.
   initCreatureViewport(viewportCanvasPlaceholder);
 
@@ -254,6 +300,7 @@ export function createLayout(rootElement, options = {}) {
       isDirty,
       currentBlueprint,
       viewportMode,
+      lightingMode,
     } = state;
 
     if (currentBlueprintName) {
@@ -292,6 +339,7 @@ export function createLayout(rootElement, options = {}) {
       input.checked = mode === selectedMode;
     });
     syncViewportToggles(selectedMode);
+    syncLightingMode(lightingMode);
   });
 
   return {

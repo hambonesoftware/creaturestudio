@@ -64,6 +64,14 @@ export function disposeCreatureViewport() {
   viewportContainerElement = null;
 }
 
+export function setViewportLighting(mode) {
+  if (!viewportInstance || typeof viewportInstance.setLightingMode !== "function") {
+    return;
+  }
+
+  viewportInstance.setLightingMode(mode);
+}
+
 /**
  * Convert a blueprint into a Three.js creature root group and display it.
  *
