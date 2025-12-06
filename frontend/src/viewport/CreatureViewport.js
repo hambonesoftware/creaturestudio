@@ -71,7 +71,9 @@ class CreatureViewport {
     this.controls.update();
 
     // Lights + ground
-    this._setupLights();
+    this.lightingMode = "allAround";
+    this.lightingGroup = null;
+    this._setupLights(this.lightingMode);
     this._setupGround();
 
     // Currently displayed creature root group (if any).
@@ -88,20 +90,93 @@ class CreatureViewport {
    * Basic lighting: soft ambient + key rim light + fill.
    * No JSX, just Three.js objects.
    */
-  _setupLights() {
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x202030, 0.6);
-    hemi.position.set(0, 4, 0);
-    this.scene.add(hemi);
+  _setupLights(mode = "allAround") {
+    if (this.lightingGroup) {
+      this._teardownLights();
+    }
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    keyLight.position.set(6, 10, 6);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
-    this.scene.add(keyLight);
+    const group = new THREE.Group();
+    group.name = `Lighting_${mode}`;
 
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    fillLight.position.set(-4, 6, -6);
-    this.scene.add(fillLight);
+    if (mode === "studio") {
+      this._buildStudioLighting(group);
+    } else {
+      this._buildAllAroundLighting(group);
+    }
+
+    this.scene.add(group);
+    this.lightingGroup = group;
+    this.lightingMode = mode;
+  }
+
+  _teardownLights() {
+    if (!this.lightingGroup) return;
+
+    this.lightingGroup.traverse((obj) => {
+      if (obj.isLight && obj.shadow && obj.shadow.map) {
+        obj.shadow.map.dispose();
+      }
+    });
+
+    this.scene.remove(this.lightingGroup);
+    this.lightingGroup = null;
+  }
+
+  _buildStudioLighting(group) {
+    const keySpot = new THREE.SpotLight(0xffffff, 1.4, 40, Math.PI / 4.5, 0.4, 1);
+    keySpot.position.set(8, 10, 7);
+    keySpot.castShadow = true;
+    keySpot.shadow.mapSize.set(2048, 2048);
+    keySpot.target.position.set(0, 1, 0);
+    group.add(keySpot);
+    group.add(keySpot.target);
+
+    const fillSpot = new THREE.SpotLight(0xffffff, 1.0, 35, Math.PI / 4.2, 0.5, 1);
+    fillSpot.position.set(-8, 9, 5);
+    fillSpot.castShadow = true;
+    fillSpot.shadow.mapSize.set(1024, 1024);
+    fillSpot.target.position.set(0, 1, 0);
+    group.add(fillSpot);
+    group.add(fillSpot.target);
+
+    const rimSpot = new THREE.SpotLight(0xbcd8ff, 0.8, 45, Math.PI / 3.8, 0.35, 1);
+    rimSpot.position.set(0, 11, -9);
+    rimSpot.castShadow = true;
+    rimSpot.shadow.mapSize.set(1024, 1024);
+    rimSpot.target.position.set(0, 1, 0);
+    group.add(rimSpot);
+    group.add(rimSpot.target);
+  }
+
+  _buildAllAroundLighting(group) {
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x1f2635, 1.1);
+    hemi.position.set(0, 6, 0);
+    group.add(hemi);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+    group.add(ambient);
+
+    const north = new THREE.DirectionalLight(0xf0f6ff, 0.55);
+    north.position.set(0, 10, 6);
+    north.castShadow = true;
+    north.shadow.mapSize.set(1024, 1024);
+    group.add(north);
+
+    const west = new THREE.DirectionalLight(0xf0f6ff, 0.45);
+    west.position.set(-6, 8, -4);
+    group.add(west);
+
+    const east = new THREE.DirectionalLight(0xf0f6ff, 0.35);
+    east.position.set(6, 8, -4);
+    group.add(east);
+  }
+
+  setLightingMode(mode) {
+    const normalized = mode === "studio" ? "studio" : "allAround";
+    if (this.lightingMode === normalized) {
+      return;
+    }
+    this._setupLights(normalized);
   }
 
   /**
