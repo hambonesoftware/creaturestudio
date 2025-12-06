@@ -93,7 +93,8 @@ export function updateViewportFromBlueprint(blueprint) {
       ? sizes.globalScale
       : 1.0;
 
-  const helperTarget = runtime.skeletonRoot || runtime.mesh || runtime.root;
+  const helperTarget =
+    runtime.skeletonRoot || runtime.skeletonRootGroup || runtime.mesh || runtime.root;
   let skeletonHelper = null;
 
   if ((viewportMode === "skeleton" || viewportMode === "both") && helperTarget) {
