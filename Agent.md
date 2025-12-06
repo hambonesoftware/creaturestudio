@@ -1,45 +1,64 @@
-# AGENTS.md — CreatureStudio
+# AGENTS.md
 
-This file tells you (the Codex agent) exactly how to run the CreatureStudio
-backend and frontend inside the Codex environment and how to capture a
-preview of the running app using Playwright.
+## Overview
 
-The main goals:
+This repository contains a web application with:
 
-1. Always use the **preinstalled Node.js 20 and npm** provided by the
-   environment. Do **not** manually install Node.
-2. Start the **FastAPI backend** on port **8000**, bound to `0.0.0.0`.
-3. Start the **Vite frontend** in **preview mode** on port **4173**,
-   bound to `0.0.0.0`, with the `/creaturestudio/` base.
-4. Use `browser_container.run_playwright_script` with
-   `ports_to_forward: [4173, 8000]` and capture a screenshot of
-   `http://127.0.0.1:4173/creaturestudio/`.
+- A **FastAPI** backend
+- A **Vite** frontend served at `/creaturestudio/`
+- **Playwright** end-to-end tests to drive the UI in a real browser
 
----
+A ChatGPT Codex agent working in this repo should:
 
-## Project overview
+1. Install backend and frontend dependencies.
+2. Start the backend API server.
+3. Start the Vite frontend dev server on port **4173** with the `/creaturestudio/` base path.
+4. Use **Playwright** to open the running app and run tests (or smoke checks) against it.
 
-- Repository name: **CreatureStudio**
-- Backend: **FastAPI** in `backend/`
-- Frontend: **Vite + Three.js** in `frontend/`
-- Shared blueprints: `shared/blueprints/ElephantBlueprint.json` etc.
-
-The running system for previews is:
-
-- Backend API: `http://127.0.0.1:8000`
-- Frontend UI: `http://127.0.0.1:4173/creaturestudio/`
+Internet access may be disabled after the Codex setup phase, so all dependencies must be installed up-front.
 
 ---
 
-## Environment expectations
+## Repository Layout (expected)
 
-When working in the Codex environment:
+Adjust if your actual paths differ.
 
-- Assume the working directory is `/workspace/creaturestudio`.
-- The environment configuration already sets **Node.js 20** and **npm**
-  as preinstalled packages.
-- You should be able to run:
+- `backend/`
+  - FastAPI app entrypoint: `app/main.py`
+  - Requirements: `backend/requirements.txt`
+- `frontend/`
+  - Vite app, Playwright tests, and config
+  - `package.json`
+  - `playwright.config.(ts|js)`
+  - `tests/` or `playwright/` directory for end-to-end tests
 
-  ```bash
-  node -v
-  npm -v
+---
+
+## Tooling and Runtime Requirements
+
+The Codex agent should assume:
+
+- **Python**: 3.10–3.12
+- **Node.js**: 18+ (20+ preferred)
+- **Package managers**:
+  - `pip` for Python
+  - `npm` (or `pnpm`/`yarn` if already used by `package.json`)
+- **Playwright**:
+  - Installed via `npx playwright install --with-deps` inside `frontend/`
+
+---
+
+## Backend: How to Set Up and Run
+
+### One-time backend setup
+
+From the **repo root**:
+
+```bash
+cd backend
+
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+pip install --upgrade pip
+pip install -r requirements.txt
