@@ -347,12 +347,50 @@ body {
 }
 
 .cs-right-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
   padding: 0.6rem 0.9rem;
   border-bottom: 1px solid var(--cs-border-subtle);
+}
+
+.cs-right-sidebar-title {
   font-size: 0.8rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--cs-text-soft);
+}
+
+.cs-inspector-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--cs-border-subtle);
+}
+
+.cs-inspector-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--cs-text-soft);
+  font-size: 0.72rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.cs-inspector-toggle:hover {
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.cs-inspector-toggle.is-active {
+  background: var(--cs-accent-muted);
+  color: var(--cs-text);
 }
 
 .cs-inspector-tabs {
