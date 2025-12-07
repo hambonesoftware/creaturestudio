@@ -210,6 +210,10 @@ export function setLightingMode(mode) {
   notify();
 }
 
+// Note: `setDebugChainName` and `setDebugIsolatePart` are defined below with
+// early-return guards to avoid unnecessary state updates. These comments are
+// kept here to preserve documentation for consumers of this module.
+
 export function setDebugShowBones(flag) {
   if (!VALID_BOOLEAN.has(Boolean(flag))) {
     return;

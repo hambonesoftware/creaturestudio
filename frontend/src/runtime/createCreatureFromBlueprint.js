@@ -1,4 +1,8 @@
 import { buildCreatureFromBlueprint } from "./BlueprintCreatureRuntime.js";
+// Import the V2 anatomy builder. This will be used when a blueprint
+// defines `chainsV2` and `bodyPartsV2` arrays, signalling that it
+// follows the generalised anatomy pipeline introduced in version 2.1.
+import { buildCreatureFromBlueprintV2 } from "./CreatureRuntimeV2.js";
 
 /**
  * High-level runtime entry: create a creature from a SpeciesBlueprint.
@@ -13,6 +17,11 @@ import { buildCreatureFromBlueprint } from "./BlueprintCreatureRuntime.js";
  *   }
  */
 export function createCreatureFromBlueprint(blueprint, options = {}) {
+  // If the blueprint defines the new V2 anatomy fields, use the V2 builder.
+  if (blueprint && Array.isArray(blueprint.chainsV2) && Array.isArray(blueprint.bodyPartsV2)) {
+    return buildCreatureFromBlueprintV2(blueprint, options);
+  }
+  // Otherwise fall back to the legacy builder.
   return buildCreatureFromBlueprint(blueprint, options);
 }
 

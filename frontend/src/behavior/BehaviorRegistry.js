@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import StudioElephantBehavior from "../animals/Elephant/StudioElephantBehavior.js";
-import { ElephantBehavior } from "../../../Elephant/ElephantBehavior.js";
+// NOTE: The Zoo ElephantBehavior is reference-only and not included in the
+// runtime bundle.  We avoid importing from `zoo_reference` or a missing
+// `Elephant/ElephantBehavior.js` path.  Instead, the creature uses the
+// StudioElephantBehavior for all elephant variants.  If a "zoo" variant is
+// requested, it will currently fallback to the studio behavior.
+
 
 /**
  * @typedef {import("./CreatureController.ts").CreatureController} CreatureController
@@ -128,10 +133,9 @@ const BEHAVIOR_REGISTRY = {
    * Default elephant behavior shared between Zoo and CreatureStudio.
    */
   elephant_default: ({ skeleton, mesh, options }) => {
-    const variant = options && options.variant === "zoo" ? "zoo" : "studio";
-    if (variant === "zoo") {
-      return new ElephantBehavior(skeleton, mesh);
-    }
+    // We no longer support Zoo-specific ElephantBehavior in the runtime
+    // because that implementation lives in `zoo_reference` and is not part
+    // of the bundled code.  Always use the studio behavior.
     return new StudioElephantBehavior(skeleton, mesh);
   },
 

@@ -16,7 +16,7 @@ class BlueprintMeta(BaseModel):
     name: str
     version: str = "1.0.0"
     schemaVersion: str = Field(
-        default="4.1.0",
+        default="4.2.0",
         description=(
             "Semantic version of the blueprint schema. Keep in sync with "
             "frontend types and JSON schema."
@@ -79,6 +79,33 @@ class Chains(BaseModel):
     )
 
 
+class ChainDefinition(BaseModel):
+    """
+    Generalised chain definition used by the anatomy V2 pipeline.
+
+    A chain definition names a chain and lists the ordered bone names that make
+    up that chain.  Optional fields provide radius samples, a profile key and
+    extension behaviour for rump/wing membranes.  Radii and options should be
+    supplied via body part options when possible; they are included here to
+    support blueprint authors who wish to store radii with the chain itself.
+    """
+
+    name: str = Field(description="Unique name of this chain.")
+    bones: List[str] = Field(description="Ordered list of bone names.")
+    radii: Optional[List[float]] = Field(
+        default=None,
+        description="Optional per-bone radii samples. Length may be equal to number of bones or one greater.",
+    )
+    profile: Optional[str] = Field(
+        default=None,
+        description="Optional profile identifier to apply along this chain.",
+    )
+    extendTo: Optional[Union[bool, Dict[str, Any]]] = Field(
+        default=None,
+        description="Optional rump/extension configuration. True enables default behaviour; an object can specify bones, extraMargin and boneRadii.",
+    )
+
+
 class SizeProfile(BaseModel):
     """Simple size or radius profile for a bone or chain."""
 
@@ -114,7 +141,9 @@ class NeckOptionsModel(BaseModel):
 
     radii: List[float] = Field(default_factory=list)
     sides: int = Field(default=18, ge=3)
-    yOffset: float = Field(default=0.0, description="Vertical offset applied to all neck points.")
+    yOffset: float = Field(
+        default=0.0, description="Vertical offset applied to all neck points."
+    )
     capBase: bool = True
     capEnd: bool = True
 
@@ -203,6 +232,33 @@ BodyPartOptions = Union[
 ]
 
 
+class BodyPartDefinition(BaseModel):
+    """Generalised body part definition used by the anatomy V2 pipeline.
+
+    Each body part definition assigns a generator to a named chain and
+    provides generator-specific options. The name field is purely
+    descriptive and need not match the chain name.
+    """
+
+    name: str = Field(description="Descriptive name of this body part.")
+    generator: str = Field(
+        description=(
+            "Key identifying which generator to invoke "
+            "(e.g. 'torsoGenerator', 'limbGenerator', 'wingGenerator')."
+        )
+    )
+    chain: str = Field(
+        description=(
+            "Name of the chain this body part uses (must match "
+            "a ChainDefinition name)."
+        )
+    )
+    options: BodyPartOptions = Field(
+        default_factory=dict,
+        description="Generator-specific tuning options.",
+    )
+
+
 class BodyPartRef(BaseModel):
     """Configuration for a single body part generator."""
 
@@ -272,8 +328,27 @@ class SpeciesBlueprint(BaseModel):
     meta: BlueprintMeta
     bodyPlan: BodyPlan
     skeleton: Skeleton
-    chains: Chains
+    chains: Optional[Chains] = Field(
+        default=None,
+        description=(
+            "Deprecated: old-style chain definitions mapping names to bone "
+            "lists. Use chainsV2 instead."
+        ),
+    )
     sizes: Sizes
-    bodyParts: BodyPartsConfig
+    bodyParts: Optional[BodyPartsConfig] = Field(
+        default=None,
+        description=(
+            "Deprecated: old-style body parts mapping. Use bodyPartsV2 instead."
+        ),
+    )
+    chainsV2: List[ChainDefinition] = Field(
+        default_factory=list,
+        description="Generalised chain definitions for the anatomy V2 pipeline.",
+    )
+    bodyPartsV2: List[BodyPartDefinition] = Field(
+        default_factory=list,
+        description="Generalised body part definitions for the anatomy V2 pipeline.",
+    )
     materials: MaterialsConfig
     behaviorPresets: BehaviorPresets

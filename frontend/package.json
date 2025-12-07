@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "debug:elephant": "vite",
-    "test:runtime": "node ./tests/runtime_smoke_test.mjs"
+    "test:runtime": "node ./tests/runtime_smoke_test.mjs",
+    "test:runtime:v2": "node ./tests/runtime_v2_smoke_test.mjs"
   },
   "dependencies": {
     "three": "^0.169.0"

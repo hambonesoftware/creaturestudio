@@ -168,6 +168,51 @@ export interface BodyPartsConfig {
   [key: string]: BodyPartRef | undefined;
 }
 
+/**
+ * Generalised chain definition used by the anatomy V2 pipeline.
+ *
+ * ChainsV2 decouple chain names from fixed schema keys and allow blueprint
+ * authors to specify arbitrary chains. Radii, profile and extendTo are
+ * optional and may be omitted if not needed. See docs/anatomy_design_v2.md
+ * for guidance on how these fields are used.
+ */
+export interface ChainDefinition {
+  /** Unique name of this chain. */
+  name: string;
+  /** Ordered list of bone names composing this chain. */
+  bones: string[];
+  /** Optional radii samples; length may equal bones length or one greater. */
+  radii?: number[];
+  /** Optional profile identifier applied along this chain. */
+  profile?: string;
+  /** Optional rump/extension configuration. */
+  extendTo?:
+    | boolean
+    | {
+        bones?: string[];
+        extraMargin?: number;
+        boneRadii?: Record<string, number>;
+      };
+}
+
+/**
+ * Generalised body part definition used by the anatomy V2 pipeline.
+ *
+ * Each body part definition assigns a generator to a named chain and
+ * supplies generator-specific options. The name is descriptive and
+ * does not need to match the chain name.
+ */
+export interface BodyPartDefinition {
+  /** Descriptive name of this body part. */
+  name: string;
+  /** Key identifying which generator to invoke (e.g. 'torsoGenerator', 'limbGenerator'). */
+  generator: string;
+  /** Name of the chain this body part uses (must match a ChainDefinition name). */
+  chain: string;
+  /** Optional generator-specific options. */
+  options?: BodyPartOptions;
+}
+
 export interface MaterialDefinition {
   color?: string;
   roughness?: number;
@@ -195,9 +240,31 @@ export interface SpeciesBlueprint {
   meta: BlueprintMeta;
   bodyPlan: BodyPlan;
   skeleton: BlueprintSkeleton;
-  chains: BlueprintChains;
+  /**
+   * Deprecated: old-style chain definitions mapping fixed names to bone lists.
+   * Use chainsV2 instead for new anatomy pipeline. This field is optional
+   * to support backwards compatibility when loading legacy blueprints.
+   */
+  chains?: BlueprintChains;
   sizes: SizesLookup;
-  bodyParts: BodyPartsConfig;
+  /**
+   * Deprecated: old-style body parts mapping keyed by fixed names. Use
+   * bodyPartsV2 instead for the anatomy V2 pipeline. Optional for backwards
+   * compatibility.
+   */
+  bodyParts?: BodyPartsConfig;
+  /**
+   * Generalised chain definitions for the anatomy V2 pipeline. Each entry
+   * describes a chain by name and its ordered bones along with optional
+   * radii, profile and extendTo fields.
+   */
+  chainsV2?: ChainDefinition[];
+  /**
+   * Generalised body part definitions for the anatomy V2 pipeline. Each
+   * body part references a chain name, specifies the generator key and
+   * provides generator-specific options.
+   */
+  bodyPartsV2?: BodyPartDefinition[];
   materials: MaterialsConfig;
   behaviorPresets: BehaviorPresets;
 }

@@ -5,7 +5,7 @@
     "author": "Zoo Canonical",
     "source": "ElephantCanonicalQuadruped",
     "notes": "Canonical quadruped reference used for CreatureStudio Phase 1.",
-    "schemaVersion": "4.1.0"
+    "schemaVersion": "4.2.0"
   },
   "bodyPlan": {
     "type": "quadruped",
@@ -730,6 +730,177 @@
       }
     }
   },
+  "chainsV2": [
+    { "name": "spine", "bones": ["spine_base", "spine_tail", "spine_mid", "spine_neck", "spine_head", "head"] },
+    { "name": "neck", "bones": ["spine_neck", "spine_head", "head", "head_tip_1", "head_tip_2"] },
+    { "name": "head", "bones": ["head", "head_tip_1", "head_tip_2", "head_tip_3", "head_tip_4"] },
+    { "name": "trunk", "bones": ["trunk_anchor", "trunk_root", "trunk_base", "trunk_mid1", "trunk_mid2", "trunk_tip"] },
+    { "name": "tail", "bones": ["tail_base", "tail_mid", "tail_tip"] },
+    { "name": "earLeft", "bones": ["ear_left", "ear_left_tip"] },
+    { "name": "earRight", "bones": ["ear_right", "ear_right_tip"] },
+    { "name": "frontLegL", "bones": ["front_left_collarbone", "front_left_upper", "front_left_lower", "front_left_foot"] },
+    { "name": "frontLegR", "bones": ["front_right_collarbone", "front_right_upper", "front_right_lower", "front_right_foot"] },
+    { "name": "backLegL", "bones": ["back_left_pelvis", "back_left_upper", "back_left_lower", "back_left_foot"] },
+    { "name": "backLegR", "bones": ["back_right_pelvis", "back_right_upper", "back_right_lower", "back_right_foot"] },
+    { "name": "tuskLeft", "bones": ["tusk_left", "tusk_left_tip"] },
+    { "name": "tuskRight", "bones": ["tusk_right", "tusk_right_tip"] }
+  ],
+  "bodyPartsV2": [
+    {
+      "name": "spine",
+      "generator": "torsoGenerator",
+      "chain": "spine",
+      "options": {
+        "radii": [1.15, 1.35, 1.0],
+        "sides": 28,
+        "radiusProfile": "elephant_heavy",
+        "rumpBulgeDepth": 0.4,
+        "extendRumpToRearLegs": {
+          "bones": [
+            "back_left_foot",
+            "back_right_foot",
+            "back_left_lower",
+            "back_right_lower",
+            "back_left_upper",
+            "back_right_upper"
+          ],
+          "extraMargin": 0.05,
+          "boneRadii": {
+            "back_left_upper": 0.5,
+            "back_right_upper": 0.5,
+            "back_left_lower": 0.42,
+            "back_right_lower": 0.42,
+            "back_left_foot": 0.44,
+            "back_right_foot": 0.44
+          }
+        },
+        "lowPoly": false,
+        "lowPolySegments": 9,
+        "lowPolyWeldTolerance": 0.02
+      }
+    },
+    {
+      "name": "neck",
+      "generator": "limbGenerator",
+      "chain": "neck",
+      "options": {
+        "radii": [0.95, 0.38],
+        "sides": 18
+      }
+    },
+    {
+      "name": "head",
+      "generator": "headGenerator",
+      "chain": "head",
+      "options": {
+        "radius": 0.95,
+        "detail": 1
+      }
+    },
+    {
+      "name": "trunk",
+      "generator": "noseGenerator",
+      "chain": "trunk",
+      "options": {
+        "baseRadius": 0.46,
+        "midRadius": 0.07,
+        "tipRadius": 0.26,
+        "sides": 24,
+        "lengthScale": 1.0,
+        "rootBone": "trunk_anchor"
+      }
+    },
+    {
+      "name": "tail",
+      "generator": "tailGenerator",
+      "chain": "tail",
+      "options": {
+        "baseRadius": 0.15,
+        "tipRadius": 0.05,
+        "sides": 14
+      }
+    },
+    {
+      "name": "earLeft",
+      "generator": "earGenerator",
+      "chain": "earLeft",
+      "options": {
+        "radii": [0.65, 0.35],
+        "sides": 20,
+        "flattenScale": 0.18,
+        "fanAngle": 0.7853981633974483
+      }
+    },
+    {
+      "name": "earRight",
+      "generator": "earGenerator",
+      "chain": "earRight",
+      "options": {
+        "radii": [0.65, 0.35],
+        "sides": 20,
+        "flattenScale": 0.18,
+        "fanAngle": -0.7853981633974483
+      }
+    },
+    {
+      "name": "frontLegL",
+      "generator": "limbGenerator",
+      "chain": "frontLegL",
+      "options": {
+        "radii": [0.5, 0.45, 0.4, 0.38, 0.43],
+        "sides": 20
+      }
+    },
+    {
+      "name": "frontLegR",
+      "generator": "limbGenerator",
+      "chain": "frontLegR",
+      "options": {
+        "radii": [0.5, 0.45, 0.4, 0.38, 0.43],
+        "sides": 20
+      }
+    },
+    {
+      "name": "backLegL",
+      "generator": "limbGenerator",
+      "chain": "backLegL",
+      "options": {
+        "radii": [0.55, 0.5, 0.42, 0.38, 0.44],
+        "sides": 20
+      }
+    },
+    {
+      "name": "backLegR",
+      "generator": "limbGenerator",
+      "chain": "backLegR",
+      "options": {
+        "radii": [0.55, 0.5, 0.42, 0.38, 0.44],
+        "sides": 20
+      }
+    },
+    {
+      "name": "tuskLeft",
+      "generator": "noseGenerator",
+      "chain": "tuskLeft",
+      "options": {
+        "baseRadius": 0.12,
+        "tipRadius": 0.02,
+        "sides": 16,
+        "lengthScale": 1.0
+      }
+    },
+    {
+      "name": "tuskRight",
+      "generator": "noseGenerator",
+      "chain": "tuskRight",
+      "options": {
+        "baseRadius": 0.12,
+        "tipRadius": 0.02,
+        "sides": 16,
+        "lengthScale": 1.0
+      }
+    }
+  ],
   "materials": {
     "surface": {
       "color": "#7a7a7a",

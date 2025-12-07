@@ -1,5 +1,7 @@
 import * as THREE from "three";
-import { buildCreatureFromBlueprint } from "../runtime/BlueprintCreatureRuntime.js";
+// Import the unified creature creation helper. This wrapper chooses
+// between the legacy and V2 builders based on the blueprint contents.
+import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
 import { CreatureViewport } from "./CreatureViewport.js";
 import { getState } from "../studioState.js";
 
@@ -86,7 +88,9 @@ export function updateViewportFromBlueprint(blueprint) {
   }
 
   const state = getState();
-  const runtime = buildCreatureFromBlueprint(blueprint, {
+  // Build the creature using the unified creation helper. This will
+  // automatically select the V2 pipeline when available.
+  const runtime = createCreatureFromBlueprint(blueprint, {
     isolatePart: state.debugIsolatePart || undefined,
   });
 
@@ -150,10 +154,17 @@ export function updateViewportFromBlueprint(blueprint) {
   }
 
   if (state.debugChainName) {
-    const chainBones =
-      blueprint.chains?.[state.debugChainName] ||
-      blueprint.chains?.extraChains?.[state.debugChainName] ||
-      [];
+    let chainBones = [];
+    // Support legacy blueprint chains (object maps) and extraChains.
+    if (blueprint.chains && (blueprint.chains[state.debugChainName] || (blueprint.chains.extraChains && blueprint.chains.extraChains[state.debugChainName]))) {
+      chainBones = blueprint.chains[state.debugChainName] || blueprint.chains.extraChains[state.debugChainName] || [];
+    } else if (Array.isArray(blueprint.chainsV2)) {
+      // Look up the chain definition in V2 blueprints.
+      const cd = blueprint.chainsV2.find((c) => c && c.name === state.debugChainName);
+      if (cd && Array.isArray(cd.bones)) {
+        chainBones = cd.bones;
+      }
+    }
     if (Array.isArray(chainBones) && chainBones.length > 0) {
       const points = [];
       for (const name of chainBones) {

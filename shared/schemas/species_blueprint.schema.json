@@ -23,6 +23,18 @@
     "bodyParts": {
       "$ref": "#/$defs/BodyPartsConfig"
     },
+    "chainsV2": {
+      "type": "array",
+      "description": "Generalised chain definitions for the anatomy V2 pipeline.",
+      "items": { "$ref": "#/$defs/ChainDefinition" },
+      "default": []
+    },
+    "bodyPartsV2": {
+      "type": "array",
+      "description": "Generalised body part definitions for the anatomy V2 pipeline.",
+      "items": { "$ref": "#/$defs/BodyPartDefinition" },
+      "default": []
+    },
     "materials": {
       "$ref": "#/$defs/MaterialsConfig"
     },
@@ -60,7 +72,7 @@
         "schemaVersion": {
           "type": "string",
           "description": "Semantic version of the blueprint schema used to author this file.",
-          "default": "4.1.0"
+          "default": "4.2.0"
         },
         "author": {
           "type": "string",
@@ -521,6 +533,75 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/BodyPartRef"
+      }
+    },
+    "ChainDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bones"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique name of this chain."
+        },
+        "bones": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of bone names composing this chain."
+        },
+        "radii": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Optional per-bone radii samples. Length may equal number of bones or one greater."
+        },
+        "profile": {
+          "type": "string",
+          "description": "Optional profile identifier to apply along this chain."
+        },
+        "extendTo": {
+          "description": "Optional rump/extension configuration.",
+          "oneOf": [
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "bones": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "extraMargin": { "type": "number" },
+                "boneRadii": {
+                  "type": "object",
+                  "additionalProperties": { "type": "number" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "BodyPartDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "generator", "chain"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Descriptive name of this body part."
+        },
+        "generator": {
+          "type": "string",
+          "description": "Key identifying which generator to invoke (e.g. 'torsoGenerator', 'limbGenerator')."
+        },
+        "chain": {
+          "type": "string",
+          "description": "Name of the chain this body part uses."
+        },
+        "options": {
+          "$ref": "#/$defs/BodyPartOptions",
+          "description": "Generator-specific tuning options."
+        }
       }
     },
     "MaterialDefinition": {

@@ -1,4 +1,4 @@
-import { getState } from "../../studioState.js";
+import { getState, setDebugChainName } from "../../studioState.js";
 
 /**
  * Body Plan panel – shows high-level body plan information from the blueprint.
@@ -51,6 +51,10 @@ export function createBodyPlanPanel() {
     addMeta("Author", meta.author);
     addMeta("Source", meta.source);
     addMeta("Notes", meta.notes);
+    // Expose the blueprint schema version if present. Prefer a top-level
+    // schemaVersion field on the blueprint, falling back to meta.schemaVersion.
+    const schemaVersion = blueprint.schemaVersion || meta.schemaVersion;
+    addMeta("Schema", schemaVersion);
 
     metaSection.appendChild(metaList);
 
@@ -81,6 +85,35 @@ export function createBodyPlanPanel() {
     }
 
     bodyPlanSection.appendChild(bodyPlanList);
+
+    // List generalised chains with bone counts for anatomy V2 blueprints.
+    if (Array.isArray(blueprint.chainsV2) && blueprint.chainsV2.length) {
+      const chainsHeading = document.createElement("h3");
+      chainsHeading.textContent = "Chains";
+      bodyPlanSection.appendChild(chainsHeading);
+      const chainsList = document.createElement("ul");
+      chainsList.className = "cs-chains-list";
+      blueprint.chainsV2.forEach((chainDef) => {
+        if (!chainDef || !chainDef.name) return;
+        const li = document.createElement("li");
+        li.className = "cs-chain-row";
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "cs-chain-name";
+        nameSpan.textContent = chainDef.name;
+        li.appendChild(nameSpan);
+        const countSpan = document.createElement("span");
+        countSpan.className = "cs-chain-count";
+        const bonesCount = Array.isArray(chainDef.bones) ? chainDef.bones.length : 0;
+        countSpan.textContent = `(${bonesCount} bones)`;
+        li.appendChild(countSpan);
+        // Click handler: update debugChainName in global state so the viewport highlights this chain.
+        li.addEventListener('click', () => {
+          setDebugChainName(chainDef.name);
+        });
+        chainsList.appendChild(li);
+      });
+      bodyPlanSection.appendChild(chainsList);
+    }
   }
 
   return {
