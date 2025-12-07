@@ -20,6 +20,9 @@ const state = {
   error: null,
   viewportMode: "mesh",
   lightingMode: "allAround",
+  debugShowBones: false,
+  debugChainName: "",
+  debugIsolatePart: "",
 };
 
 const listeners = new Set();
@@ -36,6 +39,9 @@ export function initState() {
   state.error = null;
   state.viewportMode = "mesh";
   state.lightingMode = "allAround";
+  state.debugShowBones = false;
+  state.debugChainName = "";
+  state.debugIsolatePart = "";
   notify();
 }
 
@@ -170,6 +176,7 @@ export function setError(error) {
 
 const VALID_VIEWPORT_MODES = new Set(["mesh", "skeleton", "both"]);
 const VALID_LIGHTING_MODES = new Set(["studio", "allAround"]);
+const VALID_BOOLEAN = new Set([true, false]);
 
 /**
  * Update the viewport visualization mode (mesh / skeleton / both).
@@ -200,6 +207,30 @@ export function setLightingMode(mode) {
   }
 
   state.lightingMode = mode;
+  notify();
+}
+
+export function setDebugShowBones(flag) {
+  if (!VALID_BOOLEAN.has(Boolean(flag))) {
+    return;
+  }
+  const next = Boolean(flag);
+  if (state.debugShowBones === next) return;
+  state.debugShowBones = next;
+  notify();
+}
+
+export function setDebugChainName(name) {
+  const value = typeof name === "string" ? name : "";
+  if (state.debugChainName === value) return;
+  state.debugChainName = value;
+  notify();
+}
+
+export function setDebugIsolatePart(partName) {
+  const value = typeof partName === "string" ? partName : "";
+  if (state.debugIsolatePart === value) return;
+  state.debugIsolatePart = value;
   notify();
 }
 

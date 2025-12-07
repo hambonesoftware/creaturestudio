@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-import { generateTorsoGeometry } from "../animals/bodyParts/TorsoGenerator.js";
-import { generateNeckGeometry } from "../animals/bodyParts/NeckGenerator.js";
-import { generateHeadGeometry } from "../animals/bodyParts/HeadGenerator.js";
-import { generateTailGeometry } from "../animals/bodyParts/TailGenerator.js";
-import { generateNoseGeometry } from "../animals/bodyParts/NoseGenerator.js";
-import { generateLimbGeometry } from "../animals/bodyParts/LimbGenerator.js";
-import { generateEarGeometry } from "../animals/bodyParts/EarGenerator.js";
+import { generateTorsoGeometry } from "../anatomy/TorsoGenerator.js";
+import { generateNeckGeometry } from "../anatomy/NeckGenerator.js";
+import { generateHeadGeometry } from "../anatomy/HeadGenerator.js";
+import { generateTailGeometry } from "../anatomy/TailGenerator.js";
+import { generateNoseGeometry } from "../anatomy/NoseGenerator.js";
+import { generateLimbGeometry } from "../anatomy/LimbGenerator.js";
+import { generateEarGeometry } from "../anatomy/EarGenerator.js";
 
 /**
  * Map generator names used in blueprints to actual geometry generator functions.
@@ -23,34 +23,93 @@ const GENERATORS_BY_NAME = {
   ear: generateEarGeometry,
 };
 
+function ensureSkinAttributes(geometry, defaultBoneIndex = 0) {
+  const positionAttr = geometry.getAttribute("position");
+  const vertexCount = positionAttr ? positionAttr.count : 0;
+
+  const hasSkinIndex = geometry.getAttribute("skinIndex");
+  const hasSkinWeight = geometry.getAttribute("skinWeight");
+
+  if (!hasSkinIndex || !hasSkinWeight) {
+    const skinIndices = new Uint16Array(vertexCount * 4);
+    const skinWeights = new Float32Array(vertexCount * 4);
+
+    for (let i = 0; i < vertexCount; i += 1) {
+      const baseIndex = i * 4;
+      skinIndices[baseIndex + 0] = defaultBoneIndex;
+      skinIndices[baseIndex + 1] = defaultBoneIndex;
+      skinIndices[baseIndex + 2] = defaultBoneIndex;
+      skinIndices[baseIndex + 3] = defaultBoneIndex;
+
+      skinWeights[baseIndex + 0] = 1.0;
+      skinWeights[baseIndex + 1] = 0.0;
+      skinWeights[baseIndex + 2] = 0.0;
+      skinWeights[baseIndex + 3] = 0.0;
+    }
+
+    geometry.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(skinIndices, 4));
+    geometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
+  }
+
+  if (!geometry.getAttribute("normal") && geometry.getAttribute("position")) {
+    geometry.computeVertexNormals();
+  }
+
+  return geometry;
+}
+
+function buildFallbackGeometry() {
+  const fallback = new THREE.SphereGeometry(0.45, 14, 12);
+  ensureSkinAttributes(fallback, 0);
+  fallback.computeBoundingSphere();
+  fallback.computeBoundingBox();
+  return fallback;
+}
+
 /**
  * Build a SkinnedMesh from a SpeciesBlueprint and a skeleton result.
  *
  * @param {object} blueprint - SpeciesBlueprint JSON.
  * @param {object} skeletonResult - Result of buildSkeletonFromBlueprint.
  * @param {object} options - Additional runtime options (reserved).
- * @returns {{ mesh: THREE.SkinnedMesh }}
+ * @returns {{ mesh: THREE.SkinnedMesh, mergedGeometry: THREE.BufferGeometry, partGeometries: Array }}
  */
 export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = {}) {
-  if (!blueprint || !blueprint.bodyParts || !blueprint.chains) {
-    throw new Error("Invalid blueprint: missing bodyParts or chains.");
-  }
-
   if (!skeletonResult || !skeletonResult.bones || !skeletonResult.root) {
     throw new Error("Invalid skeletonResult passed to buildGeometryFromBlueprint.");
   }
 
   const { root, bones, skeleton, bonesByName } = skeletonResult;
 
+  if (!blueprint || !blueprint.bodyParts || !blueprint.chains) {
+    // eslint-disable-next-line no-console
+    console.error("[buildGeometryFromBlueprint] Invalid blueprint: missing bodyParts or chains.");
+    const fallbackGeometry = buildFallbackGeometry();
+    const material = new THREE.MeshStandardMaterial({ color: 0xaa4444 });
+    const mesh = new THREE.SkinnedMesh(fallbackGeometry, material);
+    mesh.add(root);
+    mesh.bind(skeleton);
+    return { mesh, mergedGeometry: fallbackGeometry, partGeometries: [] };
+  }
+
   // Ensure world matrices are up to date before querying world positions.
   root.updateWorldMatrix(true, true);
 
   const geometries = [];
+  const partGeometries = [];
   const sizes = blueprint.sizes || {};
   const bodyParts = blueprint.bodyParts || {};
+  const isolatePartName =
+    typeof options.isolatePart === "string" && options.isolatePart.length > 0
+      ? options.isolatePart
+      : null;
 
   for (const [partName, partRef] of Object.entries(bodyParts)) {
     if (!partRef) {
+      continue;
+    }
+
+    if (isolatePartName && partName !== isolatePartName) {
       continue;
     }
 
@@ -90,6 +149,10 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
     for (const boneName of chainBoneNames) {
       const bone = bonesByName.get(boneName);
       if (!bone) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[buildGeometryFromBlueprint] Chain '${chainName}' missing bone '${boneName}' referenced by part '${partName}'`
+        );
         continue;
       }
       chainBones.push(bone);
@@ -111,8 +174,11 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       chainName,
       chainBones,
       chainWorldPositions,
+      bones: chainBoneNames,
+      skeleton,
       sizes,
       bodyPartOptions: partRef.options || {},
+      runtimeOptions: options,
     });
 
     if (!geometry || !geometry.isBufferGeometry) {
@@ -121,47 +187,26 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       continue;
     }
 
+    ensureSkinAttributes(geometry, bones.indexOf(chainBones[0]));
     geometries.push(geometry);
+    partGeometries.push({
+      name: partName,
+      generator: generatorName,
+      chain: chainName,
+      geometry,
+    });
   }
 
   if (geometries.length === 0) {
-    throw new Error("No geometries were generated for this blueprint.");
+    // eslint-disable-next-line no-console
+    console.error("[buildGeometryFromBlueprint] No geometries were generated; using fallback sphere.");
+    geometries.push(buildFallbackGeometry());
   }
 
   const mergedGeometry = mergeGeometries(geometries, true);
   mergedGeometry.computeBoundingBox();
   mergedGeometry.computeBoundingSphere();
-
-  // Attach very simple skin data: every vertex bound to bone index 0 with weight 1.
-  const positionAttr = mergedGeometry.getAttribute("position");
-  const vertexCount = positionAttr ? positionAttr.count : 0;
-
-  if (vertexCount > 0) {
-    const skinIndices = new Uint16Array(vertexCount * 4);
-    const skinWeights = new Float32Array(vertexCount * 4);
-
-    for (let i = 0; i < vertexCount; i += 1) {
-      const baseIndex = i * 4;
-      skinIndices[baseIndex + 0] = 0;
-      skinIndices[baseIndex + 1] = 0;
-      skinIndices[baseIndex + 2] = 0;
-      skinIndices[baseIndex + 3] = 0;
-
-      skinWeights[baseIndex + 0] = 1.0;
-      skinWeights[baseIndex + 1] = 0.0;
-      skinWeights[baseIndex + 2] = 0.0;
-      skinWeights[baseIndex + 3] = 0.0;
-    }
-
-    mergedGeometry.setAttribute(
-      "skinIndex",
-      new THREE.Uint16BufferAttribute(skinIndices, 4)
-    );
-    mergedGeometry.setAttribute(
-      "skinWeight",
-      new THREE.Float32BufferAttribute(skinWeights, 4)
-    );
-  }
+  ensureSkinAttributes(mergedGeometry, 0);
 
   const surfaceConfig = (blueprint.materials && blueprint.materials.surface) || {};
   const surfaceColorHex = surfaceConfig.color || "#888888";
@@ -188,5 +233,5 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
   mesh.add(root);
   mesh.bind(skeleton);
 
-  return { mesh };
+  return { mesh, mergedGeometry, partGeometries };
 }

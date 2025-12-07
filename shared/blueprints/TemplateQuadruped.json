@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "name": "TemplateQuadruped",
+    "version": "0.1.0",
+    "author": "CreatureStudio",
+    "schemaVersion": "4.1.0",
+    "notes": "Baseline quadruped proportions for blueprint authoring."
+  },
+  "bodyPlan": {
+    "type": "quadruped",
+    "hasTail": true,
+    "hasTrunk": false,
+    "hasWings": false,
+    "hasEars": true,
+    "symmetryMode": "bilateral",
+    "notes": "Four-legged frame with neutral proportions."
+  },
+  "skeleton": {
+    "root": "spine_base",
+    "coordinateSystem": "Y-up, Z-forward, X-right",
+    "bones": [
+      { "name": "spine_base", "parent": "root", "position": [0.0, 1.0, 0.0] },
+      { "name": "spine_mid", "parent": "spine_base", "position": [0.0, 0.0, 0.8] },
+      { "name": "spine_neck", "parent": "spine_mid", "position": [0.0, 0.2, 0.6] },
+      { "name": "spine_head", "parent": "spine_neck", "position": [0.0, 0.1, 0.35] },
+      { "name": "head", "parent": "spine_head", "position": [0.0, 0.0, 0.35] },
+      { "name": "spine_tail", "parent": "spine_base", "position": [0.0, -0.15, -0.5] },
+      { "name": "tail_base", "parent": "spine_tail", "position": [0.0, -0.2, -0.35] },
+      { "name": "tail_mid", "parent": "tail_base", "position": [0.0, -0.25, -0.25] },
+      { "name": "tail_tip", "parent": "tail_mid", "position": [0.0, -0.35, -0.15] },
+      { "name": "ear_left", "parent": "head", "position": [0.18, 0.05, -0.18] },
+      { "name": "ear_left_tip", "parent": "ear_left", "position": [0.18, -0.2, -0.18] },
+      { "name": "ear_right", "parent": "head", "position": [-0.18, 0.05, -0.18] },
+      { "name": "ear_right_tip", "parent": "ear_right", "position": [-0.18, -0.2, -0.18] },
+      { "name": "front_left_collarbone", "parent": "spine_mid", "position": [0.22, -0.15, 0.25] },
+      { "name": "front_left_upper", "parent": "front_left_collarbone", "position": [0.0, -0.55, 0.05] },
+      { "name": "front_left_lower", "parent": "front_left_upper", "position": [0.0, -0.5, 0.05] },
+      { "name": "front_left_foot", "parent": "front_left_lower", "position": [0.0, -0.25, 0.0] },
+      { "name": "front_right_collarbone", "parent": "spine_mid", "position": [-0.22, -0.15, 0.25] },
+      { "name": "front_right_upper", "parent": "front_right_collarbone", "position": [0.0, -0.55, 0.05] },
+      { "name": "front_right_lower", "parent": "front_right_upper", "position": [0.0, -0.5, 0.05] },
+      { "name": "front_right_foot", "parent": "front_right_lower", "position": [0.0, -0.25, 0.0] },
+      { "name": "back_left_pelvis", "parent": "spine_base", "position": [0.22, -0.1, 0.05] },
+      { "name": "back_left_upper", "parent": "back_left_pelvis", "position": [0.0, -0.55, 0.05] },
+      { "name": "back_left_lower", "parent": "back_left_upper", "position": [0.0, -0.55, -0.05] },
+      { "name": "back_left_foot", "parent": "back_left_lower", "position": [0.0, -0.25, 0.0] },
+      { "name": "back_right_pelvis", "parent": "spine_base", "position": [-0.22, -0.1, 0.05] },
+      { "name": "back_right_upper", "parent": "back_right_pelvis", "position": [0.0, -0.55, 0.05] },
+      { "name": "back_right_lower", "parent": "back_right_upper", "position": [0.0, -0.55, -0.05] },
+      { "name": "back_right_foot", "parent": "back_right_lower", "position": [0.0, -0.25, 0.0] }
+    ]
+  },
+  "chains": {
+    "spine": ["spine_base", "spine_mid", "spine_neck"],
+    "neck": ["spine_neck", "spine_head"],
+    "head": ["head"],
+    "tail": ["spine_tail", "tail_base", "tail_mid", "tail_tip"],
+    "earLeft": ["ear_left", "ear_left_tip"],
+    "earRight": ["ear_right", "ear_right_tip"],
+    "frontLegL": ["front_left_collarbone", "front_left_upper", "front_left_lower", "front_left_foot"],
+    "frontLegR": ["front_right_collarbone", "front_right_upper", "front_right_lower", "front_right_foot"],
+    "backLegL": ["back_left_pelvis", "back_left_upper", "back_left_lower", "back_left_foot"],
+    "backLegR": ["back_right_pelvis", "back_right_upper", "back_right_lower", "back_right_foot"]
+  },
+  "sizes": {
+    "defaultRadius": 0.25
+  },
+  "bodyParts": {
+    "torso": {
+      "generator": "torso",
+      "chain": "spine",
+      "options": {
+        "radii": [0.35, 0.45, 0.3],
+        "sides": 18,
+        "capStart": true,
+        "capEnd": true,
+        "lowPoly": false
+      }
+    },
+    "neck": {
+      "generator": "neck",
+      "chain": "neck",
+      "options": {
+        "radii": [0.3, 0.18],
+        "sides": 14
+      }
+    },
+    "head": {
+      "generator": "head",
+      "chain": "head",
+      "options": {
+        "radius": 0.25,
+        "sides": 18,
+        "elongation": 1.0
+      }
+    },
+    "tail": {
+      "generator": "tail",
+      "chain": "tail",
+      "options": {
+        "baseRadius": 0.12,
+        "tipRadius": 0.06,
+        "sides": 12
+      }
+    },
+    "earLeft": {
+      "generator": "ear",
+      "chain": "earLeft",
+      "options": {
+        "radii": [0.18, 0.08],
+        "sides": 12,
+        "flatten": 0.12,
+        "tilt": 0.5
+      }
+    },
+    "earRight": {
+      "generator": "ear",
+      "chain": "earRight",
+      "options": {
+        "radii": [0.18, 0.08],
+        "sides": 12,
+        "flatten": 0.12,
+        "tilt": -0.5
+      }
+    },
+    "frontLegL": {
+      "generator": "limb",
+      "chain": "frontLegL",
+      "options": {
+        "radii": [0.2, 0.16, 0.14, 0.12],
+        "sides": 12
+      }
+    },
+    "frontLegR": {
+      "generator": "limb",
+      "chain": "frontLegR",
+      "options": {
+        "radii": [0.2, 0.16, 0.14, 0.12],
+        "sides": 12
+      }
+    },
+    "backLegL": {
+      "generator": "limb",
+      "chain": "backLegL",
+      "options": {
+        "radii": [0.22, 0.18, 0.15, 0.12],
+        "sides": 12
+      }
+    },
+    "backLegR": {
+      "generator": "limb",
+      "chain": "backLegR",
+      "options": {
+        "radii": [0.22, 0.18, 0.15, 0.12],
+        "sides": 12
+      }
+    }
+  },
+  "materials": {
+    "surface": {
+      "color": "#b0b0b0",
+      "roughness": 0.7,
+      "metallic": 0.0
+    },
+    "eye": {
+      "color": "#222222",
+      "roughness": 0.3
+    }
+  },
+  "behaviorPresets": {
+    "gait": "quadruped_walk",
+    "idleBehaviors": ["idleLook"],
+    "tags": ["template", "quadruped"]
+  }
+}

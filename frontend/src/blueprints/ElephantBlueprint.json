@@ -4,7 +4,8 @@
     "version": "4.0.0",
     "author": "Zoo Canonical",
     "source": "ElephantCanonicalQuadruped",
-    "notes": "Canonical quadruped reference used for CreatureStudio Phase 1."
+    "notes": "Canonical quadruped reference used for CreatureStudio Phase 1.",
+    "schemaVersion": "4.1.0"
   },
   "bodyPlan": {
     "type": "quadruped",
@@ -550,94 +551,182 @@
       "generator": "torso",
       "chain": "spine",
       "options": {
-        "sides": 12,
-        "capRounding": 0.5
+        "radii": [
+          1.15,
+          1.35,
+          1.0
+        ],
+        "sides": 28,
+        "radiusProfile": "elephant_heavy",
+        "rumpBulgeDepth": 0.4,
+        "extendRumpToRearLegs": {
+          "bones": [
+            "back_left_foot",
+            "back_right_foot",
+            "back_left_lower",
+            "back_right_lower",
+            "back_left_upper",
+            "back_right_upper"
+          ],
+          "extraMargin": 0.05,
+          "boneRadii": {
+            "back_left_upper": 0.5,
+            "back_right_upper": 0.5,
+            "back_left_lower": 0.42,
+            "back_right_lower": 0.42,
+            "back_left_foot": 0.44,
+            "back_right_foot": 0.44
+          }
+        },
+        "lowPoly": false,
+        "lowPolySegments": 9,
+        "lowPolyWeldTolerance": 0.02
       }
     },
     "neck": {
       "generator": "neck",
       "chain": "neck",
       "options": {
-        "sides": 10
+        "radii": [
+          0.95,
+          0.38
+        ],
+        "sides": 18,
+        "capBase": true,
+        "capEnd": true
       }
     },
     "head": {
       "generator": "head",
       "chain": "head",
-      "options": {}
+      "options": {
+        "parentBone": "head",
+        "radius": 0.95,
+        "sides": 22,
+        "elongation": 1.0
+      }
     },
     "trunk": {
-      "generator": "trunk",
+      "generator": "nose",
       "chain": "trunk",
       "options": {
-        "segments": 5
+        "baseRadius": 0.46,
+        "midRadius": 0.07,
+        "tipRadius": 0.26,
+        "sides": 24,
+        "lengthScale": 1.0,
+        "rootBone": "trunk_anchor"
       }
     },
     "tail": {
       "generator": "tail",
       "chain": "tail",
       "options": {
-        "segments": 3
+        "baseRadius": 0.15,
+        "tipRadius": 0.05,
+        "sides": 14
       }
     },
     "earLeft": {
       "generator": "ear",
       "chain": "earLeft",
       "options": {
-        "side": "left"
+        "radii": [
+          0.65,
+          0.35
+        ],
+        "sides": 20,
+        "flatten": 0.18,
+        "tilt": 0.7853981633974483
       }
     },
     "earRight": {
       "generator": "ear",
       "chain": "earRight",
       "options": {
-        "side": "right"
+        "radii": [
+          0.65,
+          0.35
+        ],
+        "sides": 20,
+        "flatten": 0.18,
+        "tilt": -0.7853981633974483
       }
     },
     "frontLegL": {
       "generator": "limb",
       "chain": "frontLegL",
       "options": {
-        "side": "left",
-        "isFront": true
+        "radii": [
+          0.5,
+          0.45,
+          0.4,
+          0.38,
+          0.43
+        ],
+        "sides": 20
       }
     },
     "frontLegR": {
       "generator": "limb",
       "chain": "frontLegR",
       "options": {
-        "side": "right",
-        "isFront": true
+        "radii": [
+          0.5,
+          0.45,
+          0.4,
+          0.38,
+          0.43
+        ],
+        "sides": 20
       }
     },
     "backLegL": {
       "generator": "limb",
       "chain": "backLegL",
       "options": {
-        "side": "left",
-        "isFront": false
+        "radii": [
+          0.55,
+          0.5,
+          0.42,
+          0.38,
+          0.44
+        ],
+        "sides": 20
       }
     },
     "backLegR": {
       "generator": "limb",
       "chain": "backLegR",
       "options": {
-        "side": "right",
-        "isFront": false
+        "radii": [
+          0.55,
+          0.5,
+          0.42,
+          0.38,
+          0.44
+        ],
+        "sides": 20
       }
     },
     "tuskLeft": {
-      "generator": "limb",
+      "generator": "nose",
       "chain": "tuskLeft",
       "options": {
-        "side": "left"
+        "baseRadius": 0.12,
+        "tipRadius": 0.02,
+        "sides": 16,
+        "lengthScale": 1.0
       }
     },
     "tuskRight": {
-      "generator": "limb",
+      "generator": "nose",
       "chain": "tuskRight",
       "options": {
-        "side": "right"
+        "baseRadius": 0.12,
+        "tipRadius": 0.02,
+        "sides": 16,
+        "lengthScale": 1.0
       }
     }
   },

@@ -57,6 +57,11 @@
           "type": "string",
           "description": "Semantic version of this blueprint."
         },
+        "schemaVersion": {
+          "type": "string",
+          "description": "Semantic version of the blueprint schema used to author this file.",
+          "default": "4.1.0"
+        },
         "author": {
           "type": "string",
           "description": "Person or tool that produced this blueprint."
@@ -321,6 +326,139 @@
         }
       }
     },
+    "LimbOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radii": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 }
+        },
+        "sides": {
+          "type": "number",
+          "minimum": 3,
+          "description": "Number of radial segments."
+        },
+        "capStart": { "type": "boolean" },
+        "capEnd": { "type": "boolean" }
+      }
+    },
+    "NeckOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radii": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 }
+        },
+        "sides": { "type": "number", "minimum": 3 },
+        "yOffset": { "type": "number" },
+        "capBase": { "type": "boolean" },
+        "capEnd": { "type": "boolean" }
+      }
+    },
+    "HeadOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "parentBone": { "type": "string" },
+        "radius": { "type": "number", "minimum": 0.0 },
+        "sides": { "type": "number", "minimum": 3 },
+        "elongation": { "type": "number", "minimum": 0.0 }
+      }
+    },
+    "RumpExtensionOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bones": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "extraMargin": { "type": "number", "minimum": 0.0 },
+        "boneRadii": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0.0 }
+        }
+      }
+    },
+    "TorsoOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radii": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 }
+        },
+        "sides": { "type": "number", "minimum": 3 },
+        "radiusProfile": { "type": "string" },
+        "rumpBulgeDepth": { "type": "number" },
+        "extendRumpToRearLegs": { "$ref": "#/$defs/RumpExtensionOptions" },
+        "capStart": { "type": "boolean" },
+        "capEnd": { "type": "boolean" },
+        "lowPoly": { "type": "boolean" },
+        "lowPolySegments": { "type": "number", "minimum": 3 },
+        "lowPolyWeldTolerance": { "type": "number", "minimum": 0.0 }
+      }
+    },
+    "NoseOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radii": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 }
+        },
+        "baseRadius": { "type": "number", "minimum": 0.0 },
+        "midRadius": { "type": "number", "minimum": 0.0 },
+        "tipRadius": { "type": "number", "minimum": 0.0 },
+        "sides": { "type": "number", "minimum": 3 },
+        "capStart": { "type": "boolean" },
+        "capEnd": { "type": "boolean" },
+        "lengthScale": { "type": "number", "minimum": 0.0 },
+        "rootBone": { "type": "string" }
+      }
+    },
+    "TailOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radii": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 }
+        },
+        "baseRadius": { "type": "number", "minimum": 0.0 },
+        "tipRadius": { "type": "number", "minimum": 0.0 },
+        "sides": { "type": "number", "minimum": 3 },
+        "capStart": { "type": "boolean" },
+        "capEnd": { "type": "boolean" }
+      }
+    },
+    "EarOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radii": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 }
+        },
+        "sides": { "type": "number", "minimum": 3 },
+        "flatten": { "type": "number", "minimum": 0.0 },
+        "tilt": { "type": "number" }
+      }
+    },
+    "BodyPartOptions": {
+      "anyOf": [
+        { "$ref": "#/$defs/TorsoOptions" },
+        { "$ref": "#/$defs/NeckOptions" },
+        { "$ref": "#/$defs/HeadOptions" },
+        { "$ref": "#/$defs/NoseOptions" },
+        { "$ref": "#/$defs/TailOptions" },
+        { "$ref": "#/$defs/EarOptions" },
+        { "$ref": "#/$defs/LimbOptions" },
+        { "type": "object" }
+      ]
+    },
     "BodyPartRef": {
       "type": "object",
       "additionalProperties": true,
@@ -338,7 +476,7 @@
           "description": "Name of the chain this body part should follow."
         },
         "options": {
-          "type": "object",
+          "$ref": "#/$defs/BodyPartOptions",
           "description": "Generator-specific tuning options."
         }
       }
