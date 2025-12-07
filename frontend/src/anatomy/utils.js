@@ -381,26 +381,58 @@ export function buildSegmentedCylinders(options) {
   return merged;
 }
 
-export function ensureSkinAttributes(geometry) {
-  if (!geometry) {
+export function ensureSkinAttributes(geometry, options = {}) {
+  if (!geometry || !geometry.isBufferGeometry) {
     return geometry;
   }
-  const count = geometry.getAttribute("position")?.count || 0;
-  if (!geometry.getAttribute("skinIndex")) {
-    geometry.setAttribute(
-      "skinIndex",
-      new THREE.Uint16BufferAttribute(new Uint16Array(count * 4), 4)
+
+  const {
+    defaultBoneIndex = 0,
+    makeNonIndexed = false,
+    ensureNormals = true,
+    ensureUVs = true,
+  } = options;
+
+  let geo = geometry;
+
+  const getCount = () => geo.getAttribute("position")?.count || 0;
+  const ensureAttribute = (name, factory) => {
+    if (!geo.getAttribute(name)) {
+      geo.setAttribute(name, factory(getCount()));
+    }
+  };
+
+  if (ensureNormals && !geo.getAttribute("normal") && geo.getAttribute("position")) {
+    geo.computeVertexNormals();
+  }
+
+  if (ensureUVs) {
+    ensureAttribute(
+      "uv",
+      (count) => new THREE.Float32BufferAttribute(new Float32Array(count * 2), 2)
     );
   }
-  if (!geometry.getAttribute("skinWeight")) {
+
+  ensureAttribute("skinIndex", (count) => {
+    const indices = new Uint16Array(count * 4);
+    for (let i = 0; i < count; i += 1) {
+      indices[i * 4] = defaultBoneIndex;
+    }
+    return new THREE.Uint16BufferAttribute(indices, 4);
+  });
+
+  ensureAttribute("skinWeight", (count) => {
     const weights = new Float32Array(count * 4);
     for (let i = 0; i < count; i += 1) {
       weights[i * 4] = 1;
     }
-    geometry.setAttribute(
-      "skinWeight",
-      new THREE.Float32BufferAttribute(weights, 4)
-    );
+    return new THREE.Float32BufferAttribute(weights, 4);
+  });
+
+  if (makeNonIndexed && geo.index) {
+    geo = geo.toNonIndexed();
   }
-  return geometry;
+
+  geo.morphAttributes = geo.morphAttributes || {};
+  return geo;
 }
