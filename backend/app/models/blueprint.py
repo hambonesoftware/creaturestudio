@@ -5,7 +5,7 @@ shared/schemas/species_blueprint.schema.json and the TypeScript
 types in frontend/src/types/SpeciesBlueprint.ts.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,13 @@ class BlueprintMeta(BaseModel):
 
     name: str
     version: str = "1.0.0"
+    schemaVersion: str = Field(
+        default="4.1.0",
+        description=(
+            "Semantic version of the blueprint schema. Keep in sync with "
+            "frontend types and JSON schema."
+        ),
+    )
     author: Optional[str] = None
     source: Optional[str] = None
     notes: Optional[str] = None
@@ -90,12 +97,118 @@ class Sizes(BaseModel):
     byChain: Dict[str, SizeProfile] = Field(default_factory=dict)
 
 
+class LimbOptionsModel(BaseModel):
+    """General limb options (legs, tusks, ear bases)."""
+
+    radii: List[float] = Field(
+        default_factory=list,
+        description="Radius samples along the limb, one entry per bone with repeat for remainder.",
+    )
+    sides: int = Field(default=16, ge=3, description="Number of radial segments.")
+    capStart: bool = True
+    capEnd: bool = True
+
+
+class NeckOptionsModel(BaseModel):
+    """Options for a neck segment between torso and head."""
+
+    radii: List[float] = Field(default_factory=list)
+    sides: int = Field(default=18, ge=3)
+    yOffset: float = Field(default=0.0, description="Vertical offset applied to all neck points.")
+    capBase: bool = True
+    capEnd: bool = True
+
+
+class HeadOptionsModel(BaseModel):
+    """Spherical/ellipsoid head options."""
+
+    parentBone: str = Field(default="head")
+    radius: float = Field(default=0.6, ge=0.0)
+    sides: int = Field(default=22, ge=3)
+    elongation: float = Field(default=1.0, ge=0.0)
+
+
+class RumpExtensionModel(BaseModel):
+    """Optional rump expansion to overlap the rear legs."""
+
+    bones: List[str] = Field(default_factory=list)
+    extraMargin: float = Field(default=0.0, ge=0.0)
+    boneRadii: Dict[str, float] = Field(default_factory=dict)
+
+
+class TorsoOptionsModel(BaseModel):
+    """Torso options including rump bulge and leg overlap."""
+
+    radii: List[float] = Field(default_factory=list)
+    sides: int = Field(default=28, ge=3)
+    radiusProfile: Optional[str] = Field(
+        default=None,
+        description="Named radius profile to apply along the torso (e.g., 'elephant_heavy').",
+    )
+    rumpBulgeDepth: float = Field(
+        default=0.0,
+        description="Depth of the rump bulge in meters; 0 disables the bulge.",
+    )
+    extendRumpToRearLegs: Optional[RumpExtensionModel] = Field(default=None)
+    capStart: bool = True
+    capEnd: bool = True
+    lowPoly: bool = False
+    lowPolySegments: int = Field(default=9, ge=3)
+    lowPolyWeldTolerance: float = Field(default=0.0, ge=0.0)
+
+
+class NoseOptionsModel(BaseModel):
+    """Nose/trunk/tusk options."""
+
+    radii: List[float] = Field(default_factory=list)
+    baseRadius: float = Field(default=0.2, ge=0.0)
+    midRadius: Optional[float] = Field(default=None, ge=0.0)
+    tipRadius: float = Field(default=0.1, ge=0.0)
+    sides: int = Field(default=16, ge=3)
+    capStart: bool = True
+    capEnd: bool = True
+    lengthScale: float = Field(default=1.0, ge=0.0)
+    rootBone: Optional[str] = Field(default=None)
+
+
+class TailOptionsModel(BaseModel):
+    """Tail options for tapered tails."""
+
+    radii: List[float] = Field(default_factory=list)
+    baseRadius: float = Field(default=0.12, ge=0.0)
+    tipRadius: float = Field(default=0.05, ge=0.0)
+    sides: int = Field(default=14, ge=3)
+    capStart: bool = True
+    capEnd: bool = True
+
+
+class EarOptionsModel(BaseModel):
+    """Ear flap options built from limb geometry then flattened."""
+
+    radii: List[float] = Field(default_factory=list)
+    sides: int = Field(default=16, ge=3)
+    flatten: float = Field(default=0.2, ge=0.0)
+    tilt: float = Field(default=0.0, description="Radians to tilt the ear about Z.")
+
+
+BodyPartOptions = Union[
+    TorsoOptionsModel,
+    NeckOptionsModel,
+    HeadOptionsModel,
+    NoseOptionsModel,
+    TailOptionsModel,
+    EarOptionsModel,
+    LimbOptionsModel,
+    Dict[str, Any],
+]
+
+
 class BodyPartRef(BaseModel):
     """Configuration for a single body part generator."""
 
     generator: str
     chain: str
-    options: Dict[str, Any] = Field(
+    options: BodyPartOptions = Field(
         default_factory=dict,
         description="Generator-specific tuning options.",
     )

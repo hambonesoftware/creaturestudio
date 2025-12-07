@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
+import { buildCreatureFromBlueprint } from "../runtime/BlueprintCreatureRuntime.js";
 import { CreatureViewport } from "./CreatureViewport.js";
 import { getState } from "../studioState.js";
 
@@ -85,9 +85,12 @@ export function updateViewportFromBlueprint(blueprint) {
     return;
   }
 
-  const runtime = createCreatureFromBlueprint(blueprint);
+  const state = getState();
+  const runtime = buildCreatureFromBlueprint(blueprint, {
+    isolatePart: state.debugIsolatePart || undefined,
+  });
 
-  const { viewportMode = "mesh" } = getState();
+  const { viewportMode = "mesh" } = state;
   const creatureName = blueprint.meta && blueprint.meta.name ? blueprint.meta.name : "Creature";
 
   const displayRoot = new THREE.Group();
@@ -104,6 +107,7 @@ export function updateViewportFromBlueprint(blueprint) {
   const helperTarget =
     runtime.skeletonRoot || runtime.skeletonRootGroup || runtime.mesh || runtime.root;
   let skeletonHelper = null;
+  let debugGroup = null;
 
   if ((viewportMode === "skeleton" || viewportMode === "both") && helperTarget) {
     skeletonHelper = new THREE.SkeletonHelper(helperTarget);
@@ -125,6 +129,60 @@ export function updateViewportFromBlueprint(blueprint) {
 
   if (skeletonHelper) {
     displayRoot.add(skeletonHelper);
+  }
+
+  runtime.skeletonRootGroup?.updateWorldMatrix(true, true);
+
+  if (state.debugShowBones && runtime.bones) {
+    debugGroup = debugGroup || new THREE.Group();
+    debugGroup.name = `${creatureName}_Debug`;
+    for (const bone of runtime.bones) {
+      if (!bone || !bone.parent || !bone.parent.isBone) continue;
+      const start = new THREE.Vector3();
+      const end = new THREE.Vector3();
+      bone.parent.getWorldPosition(start);
+      bone.getWorldPosition(end);
+      const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+      const material = new THREE.LineBasicMaterial({ color: 0x44ccff, transparent: true, opacity: 0.9 });
+      const line = new THREE.Line(geometry, material);
+      debugGroup.add(line);
+    }
+  }
+
+  if (state.debugChainName) {
+    const chainBones =
+      blueprint.chains?.[state.debugChainName] ||
+      blueprint.chains?.extraChains?.[state.debugChainName] ||
+      [];
+    if (Array.isArray(chainBones) && chainBones.length > 0) {
+      const points = [];
+      for (const name of chainBones) {
+        const bone = runtime.bonesByName?.get(name);
+        if (!bone) continue;
+        const pos = new THREE.Vector3();
+        bone.getWorldPosition(pos);
+        points.push(pos);
+      }
+      if (points.length > 1) {
+        debugGroup = debugGroup || new THREE.Group();
+        const chainGeometry = new THREE.BufferGeometry().setFromPoints(points);
+        const chainMaterial = new THREE.LineDashedMaterial({
+          color: 0xffaa33,
+          linewidth: 2,
+          dashSize: 0.25,
+          gapSize: 0.1,
+        });
+        const chainLine = new THREE.Line(chainGeometry, chainMaterial);
+        chainLine.computeLineDistances();
+        chainLine.name = `${creatureName}_ChainHighlight_${state.debugChainName}`;
+        debugGroup.add(chainLine);
+      }
+    }
+  }
+
+  if (debugGroup) {
+    displayRoot.add(debugGroup);
+    runtime.debugGroup = debugGroup;
   }
 
   if (globalScale !== 1.0) {

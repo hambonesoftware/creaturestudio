@@ -1,13 +1,13 @@
 // src/animals/Elephant/ElephantGenerator.js
 
 import * as THREE from 'three';
-import { generateTorsoGeometry } from '../bodyParts/TorsoGenerator.js';
-import { generateNeckGeometry } from '../bodyParts/NeckGenerator.js';
-import { generateHeadGeometry } from '../bodyParts/HeadGenerator.js';
-import { generateTailGeometry } from '../bodyParts/TailGenerator.js';
-import { generateNoseGeometry } from '../bodyParts/NoseGenerator.js';
-import { generateLimbGeometry } from '../bodyParts/LimbGenerator.js';
-import { mergeGeometries } from '../../libs/BufferGeometryUtils.js';
+import { generateTorsoGeometry } from '../frontend/src/anatomy/TorsoGenerator.js';
+import { generateNeckGeometry } from '../frontend/src/anatomy/NeckGenerator.js';
+import { generateHeadGeometry } from '../frontend/src/anatomy/HeadGenerator.js';
+import { generateTailGeometry } from '../frontend/src/anatomy/TailGenerator.js';
+import { generateNoseGeometry } from '../frontend/src/anatomy/NoseGenerator.js';
+import { generateLimbGeometry } from '../frontend/src/anatomy/LimbGenerator.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ElephantBehavior } from './ElephantBehavior.js';
 
 import { createElephantSkinMaterial } from './ElephantSkinNode.js';
@@ -204,7 +204,16 @@ export class ElephantGenerator {
 
     // === 2. NECK (Front torso ring -> head base) ===
     // Separate neck segment from spine_neck to head.
+    const neckBaseRadius = 0.95 * headScale;
     const neckRadiusAtHead = 0.4 * (0.95 * headScale); // 40% of head diameter for slimmer profile
+
+    const neckGeometry = generateNeckGeometry(skeleton, {
+      bones: ['spine_neck', 'spine_head'],
+      radii: [neckBaseRadius, neckRadiusAtHead],
+      sides: lowPoly ? Math.max(neckSidesLowPoly, 10) : 18,
+      capBase: true,
+      capEnd: true,
+    });
    
 
     // === Trunk/Tusk spatial relationship ===
@@ -462,6 +471,7 @@ export class ElephantGenerator {
     const mergedGeometry = mergeGeometries(
       [
         torsoGeometry,
+        neckGeometry,
         headGeometry,
         trunkGeometry,
         leftTusk,

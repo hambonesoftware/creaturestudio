@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "name": "TemplateNoPed",
+    "version": "0.1.0",
+    "author": "CreatureStudio",
+    "schemaVersion": "4.1.0",
+    "notes": "Tailless/no-limb template for serpents or tentacles."
+  },
+  "bodyPlan": {
+    "type": "nopeds",
+    "hasTail": true,
+    "hasTrunk": false,
+    "hasWings": false,
+    "hasEars": false,
+    "symmetryMode": "bilateral"
+  },
+  "skeleton": {
+    "root": "spine_0",
+    "coordinateSystem": "Y-up, Z-forward, X-right",
+    "bones": [
+      { "name": "spine_0", "parent": "root", "position": [0.0, 0.5, 0.0] },
+      { "name": "spine_1", "parent": "spine_0", "position": [0.0, 0.0, 0.3] },
+      { "name": "spine_2", "parent": "spine_1", "position": [0.0, 0.0, 0.3] },
+      { "name": "spine_3", "parent": "spine_2", "position": [0.0, -0.05, 0.25] },
+      { "name": "tail_tip", "parent": "spine_3", "position": [0.0, -0.05, 0.2] }
+    ]
+  },
+  "chains": {
+    "spine": ["spine_0", "spine_1", "spine_2", "spine_3"],
+    "tail": ["spine_3", "tail_tip"]
+  },
+  "sizes": {
+    "defaultRadius": 0.16
+  },
+  "bodyParts": {
+    "torso": {
+      "generator": "torso",
+      "chain": "spine",
+      "options": { "radii": [0.18, 0.18, 0.16, 0.14], "sides": 12, "capStart": true, "capEnd": true }
+    },
+    "tail": {
+      "generator": "tail",
+      "chain": "tail",
+      "options": { "baseRadius": 0.12, "tipRadius": 0.05, "sides": 10 }
+    }
+  },
+  "materials": {
+    "surface": { "color": "#88c0d0", "roughness": 0.5 }
+  },
+  "behaviorPresets": {
+    "gait": "none",
+    "idleBehaviors": ["idleSway"],
+    "tags": ["template", "nopeds"]
+  }
+}

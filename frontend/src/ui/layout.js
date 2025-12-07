@@ -1,4 +1,12 @@
-import { subscribe, getState, setViewportMode, setLightingMode } from "../studioState.js";
+import {
+  subscribe,
+  getState,
+  setViewportMode,
+  setLightingMode,
+  setDebugShowBones,
+  setDebugChainName,
+  setDebugIsolatePart,
+} from "../studioState.js";
 import { createLeftSidebarSpeciesBrowser } from "./leftSidebarSpeciesBrowser.js";
 import { createRightSidebarInspector } from "./rightSidebarInspector.js";
 import {
@@ -235,8 +243,60 @@ export function createLayout(rootElement, options = {}) {
   skeletonToggleLabel.appendChild(skeletonToggle);
   skeletonToggleLabel.appendChild(skeletonToggleText);
 
+  const boneLinesToggleLabel = document.createElement("label");
+  boneLinesToggleLabel.className = "cs-viewport-toggle";
+  const boneLinesToggle = document.createElement("input");
+  boneLinesToggle.type = "checkbox";
+  boneLinesToggle.checked = false;
+  boneLinesToggle.addEventListener("change", () => {
+    setDebugShowBones(boneLinesToggle.checked);
+    const { currentBlueprint } = getState();
+    if (currentBlueprint) {
+      updateViewportFromBlueprint(currentBlueprint);
+    }
+  });
+  const boneLinesText = document.createElement("span");
+  boneLinesText.textContent = "Bone Lines";
+  boneLinesToggleLabel.appendChild(boneLinesToggle);
+  boneLinesToggleLabel.appendChild(boneLinesText);
+
+  const chainSelectWrapper = document.createElement("label");
+  chainSelectWrapper.className = "cs-viewport-toggle";
+  const chainSelect = document.createElement("select");
+  chainSelect.className = "cs-select cs-select-compact";
+  chainSelect.addEventListener("change", () => {
+    setDebugChainName(chainSelect.value);
+    const { currentBlueprint } = getState();
+    if (currentBlueprint) {
+      updateViewportFromBlueprint(currentBlueprint);
+    }
+  });
+  const chainSelectText = document.createElement("span");
+  chainSelectText.textContent = "Highlight Chain";
+  chainSelectWrapper.appendChild(chainSelectText);
+  chainSelectWrapper.appendChild(chainSelect);
+
+  const partSelectWrapper = document.createElement("label");
+  partSelectWrapper.className = "cs-viewport-toggle";
+  const partSelect = document.createElement("select");
+  partSelect.className = "cs-select cs-select-compact";
+  partSelect.addEventListener("change", () => {
+    setDebugIsolatePart(partSelect.value);
+    const { currentBlueprint } = getState();
+    if (currentBlueprint) {
+      updateViewportFromBlueprint(currentBlueprint);
+    }
+  });
+  const partSelectText = document.createElement("span");
+  partSelectText.textContent = "Isolate Part";
+  partSelectWrapper.appendChild(partSelectText);
+  partSelectWrapper.appendChild(partSelect);
+
   viewportOverlay.appendChild(meshToggleLabel);
   viewportOverlay.appendChild(skeletonToggleLabel);
+  viewportOverlay.appendChild(boneLinesToggleLabel);
+  viewportOverlay.appendChild(chainSelectWrapper);
+  viewportOverlay.appendChild(partSelectWrapper);
   viewportCanvasPlaceholder.appendChild(viewportOverlay);
   center.appendChild(viewportCanvasPlaceholder);
 
@@ -276,6 +336,58 @@ export function createLayout(rootElement, options = {}) {
     setViewportLighting(selectedMode);
   }
 
+  function populateChainOptions(blueprint, selectedName) {
+    chainSelect.innerHTML = "";
+    const noneOption = document.createElement("option");
+    noneOption.value = "";
+    noneOption.textContent = "None";
+    chainSelect.appendChild(noneOption);
+
+    const chains = (blueprint && blueprint.chains) || {};
+    Object.keys(chains)
+      .filter((name) => name !== "extraChains")
+      .sort()
+      .forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        chainSelect.appendChild(opt);
+      });
+
+    if (chains.extraChains && typeof chains.extraChains === "object") {
+      Object.keys(chains.extraChains)
+        .sort()
+        .forEach((name) => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          chainSelect.appendChild(opt);
+        });
+    }
+
+    chainSelect.value = selectedName || "";
+  }
+
+  function populatePartOptions(blueprint, selectedName) {
+    partSelect.innerHTML = "";
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "All Parts";
+    partSelect.appendChild(allOption);
+
+    const parts = (blueprint && blueprint.bodyParts) || {};
+    Object.keys(parts)
+      .sort()
+      .forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        partSelect.appendChild(opt);
+      });
+
+    partSelect.value = selectedName || "";
+  }
+
   // Initialize the Three.js viewport inside the placeholder container.
   initCreatureViewport(viewportCanvasPlaceholder);
 
@@ -301,6 +413,9 @@ export function createLayout(rootElement, options = {}) {
       currentBlueprint,
       viewportMode,
       lightingMode,
+      debugShowBones,
+      debugChainName,
+      debugIsolatePart,
     } = state;
 
     if (currentBlueprintName) {
@@ -340,6 +455,12 @@ export function createLayout(rootElement, options = {}) {
     });
     syncViewportToggles(selectedMode);
     syncLightingMode(lightingMode);
+
+    populateChainOptions(currentBlueprint, debugChainName);
+    populatePartOptions(currentBlueprint, debugIsolatePart);
+    boneLinesToggle.checked = Boolean(debugShowBones);
+    chainSelect.value = debugChainName || "";
+    partSelect.value = debugIsolatePart || "";
   });
 
   return {

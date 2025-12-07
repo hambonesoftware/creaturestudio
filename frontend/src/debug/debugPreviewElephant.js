@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
+import { buildCreatureFromBlueprint } from "../runtime/BlueprintCreatureRuntime.js";
 import ElephantBlueprint from "../blueprints/ElephantBlueprint.json";
 
 /**
@@ -58,7 +58,7 @@ function main() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const { root } = createCreatureFromBlueprint(ElephantBlueprint, {});
+  const { root } = buildCreatureFromBlueprint(ElephantBlueprint, {});
   root.traverse((obj) => {
     if (obj.isMesh || obj.isSkinnedMesh) {
       obj.castShadow = true;

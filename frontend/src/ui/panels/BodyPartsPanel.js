@@ -265,41 +265,114 @@ function classifyBodyPartKey(key) {
 
     content.innerHTML = "";
 
-if (!blueprint || !blueprint.bodyParts) {
-  const msg = document.createElement("p");
-  msg.textContent = "No body parts defined for this blueprint.";
-  content.appendChild(msg);
-} else {
-  const list = document.createElement("ul");
-  list.className = "cs-body-parts-list";
-
-  const partKeys = Object.keys(blueprint.bodyParts).sort();
-  partKeys.forEach((key) => {
-    const bodyPartDef = blueprint.bodyParts[key];
-
-    const li = document.createElement("li");
-    li.className = "cs-body-part-row";
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "cs-body-part-name";
-    nameSpan.textContent = key;
-    li.appendChild(nameSpan);
-
-    const summarySpan = document.createElement("span");
-    summarySpan.className = "cs-body-part-summary";
-    if (bodyPartDef && typeof bodyPartDef.type === "string") {
-      summarySpan.textContent = bodyPartDef.type;
-    } else if (bodyPartDef && typeof bodyPartDef.generator === "string") {
-      summarySpan.textContent = bodyPartDef.generator;
+    if (!blueprint || !blueprint.bodyParts) {
+      const msg = document.createElement("p");
+      msg.textContent = "No body parts defined for this blueprint.";
+      content.appendChild(msg);
     } else {
-      summarySpan.textContent = "Custom part";
-    }
-    li.appendChild(summarySpan);
+      const summarySection = document.createElement("section");
+      summarySection.className = "cs-panel-subsection cs-panel-body-parts-summary";
+      const summaryTitle = document.createElement("h3");
+      summaryTitle.textContent = "Resolved parts overview";
+      summarySection.appendChild(summaryTitle);
 
-    list.appendChild(li);
-  });
+      const summaryHint = document.createElement("p");
+      summaryHint.className = "cs-panel-hint";
+      summaryHint.textContent =
+        "Each part lists its generator, chain, and a few headline options to help debug geometry choices.";
+      summarySection.appendChild(summaryHint);
 
-  content.appendChild(list);
+      const summaryList = document.createElement("ul");
+      summaryList.className = "cs-body-parts-summary-list";
+
+      const summarizeOptions = (options = {}) => {
+        const highlights = [];
+        if (Array.isArray(options.radii) && options.radii.length) {
+          highlights.push(`radii x${options.radii.length}`);
+        }
+        if (typeof options.sides === "number") {
+          highlights.push(`sides ${options.sides}`);
+        }
+        if (typeof options.rumpBulgeDepth === "number") {
+          highlights.push(`rumpBulge ${options.rumpBulgeDepth}`);
+        }
+        if (typeof options.baseRadius === "number") {
+          highlights.push(`baseRadius ${options.baseRadius}`);
+        }
+        if (typeof options.tipRadius === "number") {
+          highlights.push(`tipRadius ${options.tipRadius}`);
+        }
+        return highlights.length ? highlights.join(", ") : "no options";
+      };
+
+      Object.entries(blueprint.bodyParts)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([partKey, partDef]) => {
+          const row = document.createElement("li");
+          row.className = "cs-body-part-summary-row";
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "cs-body-part-name";
+          nameSpan.textContent = partKey;
+          row.appendChild(nameSpan);
+
+          const generatorSpan = document.createElement("span");
+          generatorSpan.className = "cs-body-part-summary";
+          generatorSpan.textContent = partDef?.generator || "unknown";
+          row.appendChild(generatorSpan);
+
+          const chainSpan = document.createElement("span");
+          chainSpan.className = "cs-body-part-chain";
+          const chainBones =
+            blueprint.chains?.[partDef?.chain] ||
+            blueprint.chains?.extraChains?.[partDef?.chain] ||
+            [];
+          const chainLabel = partDef?.chain ? `${partDef.chain} (${chainBones.length} bones)` : "no chain";
+          chainSpan.textContent = chainLabel;
+          row.appendChild(chainSpan);
+
+          const optionsSpan = document.createElement("span");
+          optionsSpan.className = "cs-body-part-options";
+          const options = partDef && typeof partDef.options === "object" ? partDef.options : {};
+          optionsSpan.textContent = summarizeOptions(options);
+          row.appendChild(optionsSpan);
+
+          summaryList.appendChild(row);
+        });
+
+      summarySection.appendChild(summaryList);
+      content.appendChild(summarySection);
+
+      const list = document.createElement("ul");
+      list.className = "cs-body-parts-list";
+
+      const partKeys = Object.keys(blueprint.bodyParts).sort();
+      partKeys.forEach((key) => {
+        const bodyPartDef = blueprint.bodyParts[key];
+
+        const li = document.createElement("li");
+        li.className = "cs-body-part-row";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "cs-body-part-name";
+        nameSpan.textContent = key;
+        li.appendChild(nameSpan);
+
+        const summarySpan = document.createElement("span");
+        summarySpan.className = "cs-body-part-summary";
+        if (bodyPartDef && typeof bodyPartDef.type === "string") {
+          summarySpan.textContent = bodyPartDef.type;
+        } else if (bodyPartDef && typeof bodyPartDef.generator === "string") {
+          summarySpan.textContent = bodyPartDef.generator;
+        } else {
+          summarySpan.textContent = "Custom part";
+        }
+        li.appendChild(summarySpan);
+
+        list.appendChild(li);
+      });
+
+      content.appendChild(list);
 
   const editorHeading = document.createElement("h3");
   editorHeading.textContent = "Body part details";

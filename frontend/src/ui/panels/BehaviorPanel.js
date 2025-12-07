@@ -14,6 +14,8 @@ import { updateViewportFromBlueprint } from "../../viewport/viewportBridge.js";
  * yet drive animation inside CreatureStudio, but they are fully persisted
  * and ready for future runtime behavior systems.
  */
+const KNOWN_BEHAVIORS = new Set(["elephant_default", "quadruped_walk", "none"]);
+
 export function createBehaviorPanel() {
   const root = document.createElement("div");
   root.className = "cs-panel cs-panel-behavior";
@@ -205,6 +207,14 @@ export function createBehaviorPanel() {
     add("Idle behaviors", behavior.idleBehaviors);
     add("Special interactions", behavior.specialInteractions);
     add("Tags", behavior.tags || blueprint.meta?.tags);
+
+    const gaitId = behavior.gait || "none";
+    const registryStatus = document.createElement("p");
+    registryStatus.className = "cs-panel-hint";
+    registryStatus.textContent = KNOWN_BEHAVIORS.has(gaitId)
+      ? `Resolved controller: ${gaitId}`
+      : `Unregistered behavior id: ${gaitId} (add to BehaviorRegistry to activate)`;
+    summarySection.appendChild(registryStatus);
 
     if (list.children.length === 0) {
       const msg = document.createElement("p");

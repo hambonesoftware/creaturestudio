@@ -7,6 +7,7 @@
 export interface BlueprintMeta {
   name: string;
   version: string;
+  schemaVersion?: string;
   author?: string;
   source?: string;
   notes?: string;
@@ -67,10 +68,89 @@ export interface SizesLookup {
   byChain?: Record<string, SizeProfile>;
 }
 
+export interface LimbOptions {
+  radii?: number[];
+  sides?: number;
+  capStart?: boolean;
+  capEnd?: boolean;
+}
+
+export interface NeckOptions {
+  radii?: number[];
+  sides?: number;
+  yOffset?: number;
+  capBase?: boolean;
+  capEnd?: boolean;
+}
+
+export interface HeadOptions {
+  parentBone?: string;
+  radius?: number;
+  sides?: number;
+  elongation?: number;
+}
+
+export interface RumpExtensionOptions {
+  bones?: string[];
+  extraMargin?: number;
+  boneRadii?: Record<string, number>;
+}
+
+export interface TorsoOptions {
+  radii?: number[];
+  sides?: number;
+  radiusProfile?: string;
+  rumpBulgeDepth?: number;
+  extendRumpToRearLegs?: RumpExtensionOptions;
+  capStart?: boolean;
+  capEnd?: boolean;
+  lowPoly?: boolean;
+  lowPolySegments?: number;
+  lowPolyWeldTolerance?: number;
+}
+
+export interface NoseOptions {
+  radii?: number[];
+  baseRadius?: number;
+  midRadius?: number;
+  tipRadius?: number;
+  sides?: number;
+  capStart?: boolean;
+  capEnd?: boolean;
+  lengthScale?: number;
+  rootBone?: string;
+}
+
+export interface TailOptions {
+  radii?: number[];
+  baseRadius?: number;
+  tipRadius?: number;
+  sides?: number;
+  capStart?: boolean;
+  capEnd?: boolean;
+}
+
+export interface EarOptions {
+  radii?: number[];
+  sides?: number;
+  flatten?: number;
+  tilt?: number;
+}
+
+export type BodyPartOptions =
+  | TorsoOptions
+  | NeckOptions
+  | HeadOptions
+  | NoseOptions
+  | TailOptions
+  | EarOptions
+  | LimbOptions
+  | Record<string, unknown>;
+
 export interface BodyPartRef {
   generator: string;
   chain: string;
-  options?: Record<string, unknown>;
+  options?: BodyPartOptions;
 }
 
 export interface BodyPartsConfig {

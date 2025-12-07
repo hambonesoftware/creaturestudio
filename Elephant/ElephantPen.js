@@ -2,6 +2,7 @@
 
 import { ElephantCreature } from './ElephantCreature.js';
 import * as THREE from 'three';
+import { createBehaviorControllerForBlueprint } from '../frontend/src/behavior/BehaviorRegistry.js';
 
 /**
  * ElephantPen: naturalistic safari enclosure with a pond, rocks, and a roaming
@@ -170,6 +171,17 @@ export class ElephantPen {
     if (this.Elephant.mesh) {
       this.Elephant.mesh.castShadow = true;
       this.Elephant.mesh.receiveShadow = true;
+    }
+
+    const behaviorBlueprint = { behaviorPresets: { gait: 'elephant_default' } };
+    const registryBehavior = createBehaviorControllerForBlueprint(
+      behaviorBlueprint,
+      this.Elephant.skeleton,
+      this.Elephant.mesh,
+      { variant: 'zoo' }
+    );
+    if (registryBehavior) {
+      this.Elephant.behavior = registryBehavior;
     }
 
     // Inform locomotion about the enclosure + pond
