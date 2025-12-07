@@ -7,6 +7,7 @@ import { generateHeadGeometry } from '../frontend/src/anatomy/HeadGenerator.js';
 import { generateTailGeometry } from '../frontend/src/anatomy/TailGenerator.js';
 import { generateNoseGeometry } from '../frontend/src/anatomy/NoseGenerator.js';
 import { generateLimbGeometry } from '../frontend/src/anatomy/LimbGenerator.js';
+import { ensureSkinAttributes } from '../frontend/src/anatomy/utils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ElephantBehavior } from './ElephantBehavior.js';
 
@@ -425,49 +426,6 @@ export class ElephantGenerator {
     // authored independently, so we normalise them here by ensuring each
     // has position/normal/uv/skinIndex/skinWeight attributes and by
     // converting everything to non-indexed form.
-    const prepareForMerge = (geometry) => {
-      let geo = geometry;
-
-      const count = geo.getAttribute('position').count;
-      const ensureAttribute = (name, factory) => {
-        if (!geo.getAttribute(name)) {
-          geo.setAttribute(name, factory(count));
-        }
-      };
-
-      ensureAttribute('normal', () => {
-        geo.computeVertexNormals();
-        return geo.getAttribute('normal');
-      });
-
-      ensureAttribute('uv', (vertexCount) =>
-        new THREE.Float32BufferAttribute(
-          new Float32Array(vertexCount * 2),
-          2
-        )
-      );
-
-      ensureAttribute('skinIndex', (vertexCount) =>
-        new THREE.Uint16BufferAttribute(
-          new Uint16Array(vertexCount * 4),
-          4
-        )
-      );
-
-      ensureAttribute('skinWeight', (vertexCount) => {
-        const weights = new Float32Array(vertexCount * 4);
-        for (let i = 0; i < vertexCount; i += 1) {
-          weights[i * 4] = 1; // full weight to the first influence
-        }
-        return new THREE.Float32BufferAttribute(weights, 4);
-      });
-
-      geo = geo.index ? geo.toNonIndexed() : geo;
-      geo.morphAttributes = geo.morphAttributes || {};
-
-      return geo;
-    };
-
     const mergedGeometry = mergeGeometries(
       [
         torsoGeometry,
@@ -483,7 +441,7 @@ export class ElephantGenerator {
         fr,
         bl,
         br
-      ].map(prepareForMerge),
+      ].map((geometry) => ensureSkinAttributes(geometry, { makeNonIndexed: true })),
       false
     );
 

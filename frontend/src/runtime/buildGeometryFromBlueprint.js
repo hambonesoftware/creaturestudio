@@ -8,6 +8,7 @@ import { generateTailGeometry } from "../anatomy/TailGenerator.js";
 import { generateNoseGeometry } from "../anatomy/NoseGenerator.js";
 import { generateLimbGeometry } from "../anatomy/LimbGenerator.js";
 import { generateEarGeometry } from "../anatomy/EarGenerator.js";
+import { ensureSkinAttributes } from "../anatomy/utils.js";
 
 /**
  * Map generator names used in blueprints to actual geometry generator functions.
@@ -23,47 +24,15 @@ const GENERATORS_BY_NAME = {
   ear: generateEarGeometry,
 };
 
-function ensureSkinAttributes(geometry, defaultBoneIndex = 0) {
-  const positionAttr = geometry.getAttribute("position");
-  const vertexCount = positionAttr ? positionAttr.count : 0;
-
-  const hasSkinIndex = geometry.getAttribute("skinIndex");
-  const hasSkinWeight = geometry.getAttribute("skinWeight");
-
-  if (!hasSkinIndex || !hasSkinWeight) {
-    const skinIndices = new Uint16Array(vertexCount * 4);
-    const skinWeights = new Float32Array(vertexCount * 4);
-
-    for (let i = 0; i < vertexCount; i += 1) {
-      const baseIndex = i * 4;
-      skinIndices[baseIndex + 0] = defaultBoneIndex;
-      skinIndices[baseIndex + 1] = defaultBoneIndex;
-      skinIndices[baseIndex + 2] = defaultBoneIndex;
-      skinIndices[baseIndex + 3] = defaultBoneIndex;
-
-      skinWeights[baseIndex + 0] = 1.0;
-      skinWeights[baseIndex + 1] = 0.0;
-      skinWeights[baseIndex + 2] = 0.0;
-      skinWeights[baseIndex + 3] = 0.0;
-    }
-
-    geometry.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(skinIndices, 4));
-    geometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
-  }
-
-  if (!geometry.getAttribute("normal") && geometry.getAttribute("position")) {
-    geometry.computeVertexNormals();
-  }
-
-  return geometry;
-}
-
 function buildFallbackGeometry() {
   const fallback = new THREE.SphereGeometry(0.45, 14, 12);
-  ensureSkinAttributes(fallback, 0);
-  fallback.computeBoundingSphere();
-  fallback.computeBoundingBox();
-  return fallback;
+  const preparedFallback = ensureSkinAttributes(fallback, {
+    defaultBoneIndex: 0,
+    makeNonIndexed: true,
+  });
+  preparedFallback.computeBoundingSphere();
+  preparedFallback.computeBoundingBox();
+  return preparedFallback;
 }
 
 /**
@@ -84,7 +53,10 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
   if (!blueprint || !blueprint.bodyParts || !blueprint.chains) {
     // eslint-disable-next-line no-console
     console.error("[buildGeometryFromBlueprint] Invalid blueprint: missing bodyParts or chains.");
-    const fallbackGeometry = buildFallbackGeometry();
+    const fallbackGeometry = ensureSkinAttributes(buildFallbackGeometry(), {
+      defaultBoneIndex: 0,
+      makeNonIndexed: true,
+    });
     const material = new THREE.MeshStandardMaterial({ color: 0xaa4444 });
     const mesh = new THREE.SkinnedMesh(fallbackGeometry, material);
     mesh.add(root);
@@ -187,26 +159,36 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       continue;
     }
 
-    ensureSkinAttributes(geometry, bones.indexOf(chainBones[0]));
-    geometries.push(geometry);
+    const preparedGeometry = ensureSkinAttributes(geometry, {
+      defaultBoneIndex: bones.indexOf(chainBones[0]),
+      makeNonIndexed: true,
+    });
+    geometries.push(preparedGeometry);
     partGeometries.push({
       name: partName,
       generator: generatorName,
       chain: chainName,
-      geometry,
+      geometry: preparedGeometry,
     });
   }
 
   if (geometries.length === 0) {
     // eslint-disable-next-line no-console
     console.error("[buildGeometryFromBlueprint] No geometries were generated; using fallback sphere.");
-    geometries.push(buildFallbackGeometry());
+    geometries.push(
+      ensureSkinAttributes(buildFallbackGeometry(), {
+        defaultBoneIndex: 0,
+        makeNonIndexed: true,
+      })
+    );
   }
 
-  const mergedGeometry = mergeGeometries(geometries, true);
+  const mergedGeometry = ensureSkinAttributes(mergeGeometries(geometries, true), {
+    defaultBoneIndex: 0,
+    makeNonIndexed: true,
+  });
   mergedGeometry.computeBoundingBox();
   mergedGeometry.computeBoundingSphere();
-  ensureSkinAttributes(mergedGeometry, 0);
 
   const surfaceConfig = (blueprint.materials && blueprint.materials.surface) || {};
   const surfaceColorHex = surfaceConfig.color || "#888888";
