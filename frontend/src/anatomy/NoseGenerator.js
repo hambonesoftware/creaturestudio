@@ -1,12 +1,19 @@
-import * as THREE from "three";
-import {
-  buildSkinnedTubeGeometry,
-  expandRadii,
-  normalizeGeneratorParams,
-  resolveBoneNames,
-  resolveChainPositions,
-  sampleWorldPositionsFromBones,
-} from "./utils.js";
+import { normalizeGeneratorParams, resolveChainPositions } from "./utils.js";
+import { generateTailGeometry } from "./TailGenerator.js";
+
+const DEFAULT_ROOTS = ["head_tip_2", "head_tip_1", "head"];
+
+function resolveRootBoneName(skeleton, preferredRoot, fallbackRoots) {
+  if (!skeleton?.bones) {
+    return preferredRoot || null;
+  }
+
+  const candidates = preferredRoot
+    ? [preferredRoot, ...fallbackRoots.filter((name) => name !== preferredRoot)]
+    : [...fallbackRoots];
+
+  return candidates.find((name) => skeleton.bones.some((bone) => bone.name === name)) || null;
+}
 
 export function generateNoseGeometry(arg1, arg2 = {}) {
   const params = normalizeGeneratorParams(arg1, arg2);
@@ -17,54 +24,41 @@ export function generateNoseGeometry(arg1, arg2 = {}) {
     chainBones,
     chainWorldPositions,
     rootBone,
+    fallbackRoots = DEFAULT_ROOTS,
     radii = [],
     baseRadius = 0.2,
     midRadius,
     tipRadius = 0.1,
     sides = 16,
-    capStart = true,
-    capEnd = true,
     lengthScale = 1.0,
     partName = "nose",
   } = options;
 
-  let points = resolveChainPositions({
+  const resolvedRoot = resolveRootBoneName(skeleton, rootBone, fallbackRoots);
+
+  const chainPositions = resolveChainPositions({
     skeleton,
     bones,
     chainBones,
     chainWorldPositions,
   });
 
-  if (rootBone && skeleton) {
-    const [rootPos] = sampleWorldPositionsFromBones(skeleton, [rootBone]);
-    if (rootPos) {
-      points = [rootPos, ...points];
-    }
-  }
+  const tailBones = resolvedRoot ? [resolvedRoot, ...bones] : bones;
+  const noseRadii =
+    radii.length > 0 ? radii : [baseRadius, midRadius || baseRadius * 0.7, tipRadius];
 
-  if (points.length < 2) {
-    return new THREE.CylinderGeometry(baseRadius, tipRadius, 0.8 * lengthScale, Math.max(6, sides));
-  }
-
-  let baseRadii = radii;
-  if (radii.length === 0) {
-    baseRadii = [baseRadius, midRadius || baseRadius * 0.7, tipRadius];
-  }
-
-  const radiiArray = expandRadii(
-    baseRadii.map((r) => r * lengthScale),
-    points.length,
-    baseRadius * lengthScale
-  );
-
-  const geometry = buildSkinnedTubeGeometry({
-    points,
-    radii: radiiArray,
-    sides,
-    capStart,
-    capEnd,
+  const geometry = generateTailGeometry({
     skeleton,
-    boneNames: resolveBoneNames(options),
+    bones: tailBones,
+    chainBones: resolvedRoot ? null : chainBones,
+    chainWorldPositions: resolvedRoot ? null : chainWorldPositions,
+    radii: noseRadii.map((r) => r * lengthScale),
+    baseRadius: baseRadius * lengthScale,
+    midRadius: (midRadius || baseRadius * 0.7) * lengthScale,
+    tipRadius: tipRadius * lengthScale,
+    sides,
+    partName,
+    runtimeOptions: options.runtimeOptions,
   });
 
   geometry.name = `${partName}_Nose`;

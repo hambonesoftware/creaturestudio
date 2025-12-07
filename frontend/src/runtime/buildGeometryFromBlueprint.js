@@ -9,6 +9,7 @@ import { generateNoseGeometry } from "../anatomy/NoseGenerator.js";
 import { generateLimbGeometry } from "../anatomy/LimbGenerator.js";
 import { generateEarGeometry } from "../anatomy/EarGenerator.js";
 import { ensureSkinAttributes } from "../anatomy/utils.js";
+import { makeElephantTorsoRadiusProfile } from "../animals/Elephant/ElephantTorsoProfile.js";
 
 /**
  * Map generator names used in blueprints to actual geometry generator functions.
@@ -22,6 +23,10 @@ const GENERATORS_BY_NAME = {
   trunk: generateNoseGeometry,
   limb: generateLimbGeometry,
   ear: generateEarGeometry,
+};
+
+const RADIUS_PROFILES = {
+  elephant_heavy: () => makeElephantTorsoRadiusProfile(1.0),
 };
 
 function buildFallbackGeometry() {
@@ -140,6 +145,15 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       continue;
     }
 
+    const bodyPartOptions = { ...(partRef.options || {}) };
+
+    if (typeof bodyPartOptions.radiusProfile === "string") {
+      const profileFactory = RADIUS_PROFILES[bodyPartOptions.radiusProfile];
+      if (typeof profileFactory === "function") {
+        bodyPartOptions.radiusProfile = profileFactory({ blueprint, partName });
+      }
+    }
+
     const geometry = generator({
       blueprint,
       partName,
@@ -149,7 +163,7 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       bones: chainBoneNames,
       skeleton,
       sizes,
-      bodyPartOptions: partRef.options || {},
+      bodyPartOptions,
       runtimeOptions: options,
     });
 
