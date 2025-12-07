@@ -7,7 +7,10 @@
 
 import * as THREE from 'three';
 import { AnatomyChain, NoseOptions, AnatomyGenerator } from '../core/types.js';
-import { generateTailGeometry } from './tailGenerator.js';
+// Import the tail generator from the TypeScript module. Use `.ts`
+// extension to allow Vite/Rollup to resolve the TS source file during
+// builds.
+import { generateTailGeometry } from './tailGenerator.ts';
 
 export const generateNoseGeometry: AnatomyGenerator<NoseOptions> = ({ skeleton, chain, options }) => {
   // TODO: resolve rootBone using options.rootBone and options.fallbackRoots.

@@ -154,6 +154,10 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
   mergedGeometry.computeBoundingBox();
 
   // Create a simple material. If blueprint defines surface material, use its color.
+  // We do not set the `skinning` property in the constructor because
+  // MeshStandardMaterial's constructor does not accept a `skinning` option in
+  // some Three.js versions. Instead we assign `material.skinning = true` after
+  // instantiation when appropriate.
   let color = 0x777777;
   const surface = blueprint.materials && blueprint.materials.surface;
   if (surface && typeof surface.color === 'string') {
@@ -163,17 +167,38 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       // ignore invalid color strings
     }
   }
-  const material = new THREE.MeshStandardMaterial({ color, skinning: true });
+  const material = new THREE.MeshStandardMaterial({ color });
 
-  const mesh = new THREE.SkinnedMesh(mergedGeometry, material);
-  // Attach the skeleton root group to the mesh so the bones influence the geometry.
-  mesh.add(skeletonResult.root);
-  mesh.bind(skeleton);
+  // Determine if the merged geometry has skin attributes.  If it does, we
+  // create a SkinnedMesh and enable skinning on the material.  Otherwise, we
+  // create a plain Mesh.  Binding a skeleton to a mesh without skin
+  // attributes causes errors like `Cannot read properties of undefined` when
+  // applying bone transforms, so we avoid binding in that case.
+  const hasSkin = !!mergedGeometry.getAttribute('skinIndex') && !!mergedGeometry.getAttribute('skinWeight');
 
-  // Compose the root object for this creature.
+  let mesh;
+  if (hasSkin) {
+    material.skinning = true;
+    mesh = new THREE.SkinnedMesh(mergedGeometry, material);
+    // Attach the skeleton root group to the mesh so the bones influence the geometry.
+    mesh.add(skeletonResult.root);
+    mesh.bind(skeleton);
+  } else {
+    // No skinning data: use a plain mesh and do not bind the skeleton.  We
+    // still attach the skeleton root group to the root so it can be
+    // displayed in debug mode.
+    mesh = new THREE.Mesh(mergedGeometry, material);
+  }
+
+  // Compose the root object for this creature.  Always include the mesh and
+  // the skeleton's root group (for debug visualisation), but only the mesh
+  // will be animated if it has skinning data.
   const root = new THREE.Group();
   root.name = `${(blueprint.meta && blueprint.meta.name) || 'Creature'}_CreatureRootV2`;
   root.add(mesh);
+  // Always add the skeleton group for debugging; it will render bones even
+  // when the mesh isn't skinned.
+  root.add(skeletonResult.root);
 
   return {
     root,
