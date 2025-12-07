@@ -1,327 +1,307 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+
+import { generateTorsoGeometry } from "../../anatomy/TorsoGenerator.js";
+import { generateNeckGeometry } from "../../anatomy/NeckGenerator.js";
+import { generateHeadGeometry } from "../../anatomy/HeadGenerator.js";
+import { generateTailGeometry } from "../../anatomy/TailGenerator.js";
+import { generateNoseGeometry } from "../../anatomy/NoseGenerator.js";
+import { generateLimbGeometry } from "../../anatomy/LimbGenerator.js";
+import { ensureSkinAttributes, getBoneByName } from "../../anatomy/utils.js";
+
 import { ElephantDefinition } from "./ElephantDefinition.js";
 import { createElephantSkinMaterial } from "./ElephantSkinMaterial.js";
+import { makeElephantTorsoRadiusProfile } from "./ElephantTorsoProfile.js";
 
-function averageSizeRadius(sizeEntry, fallback = 0.35) {
-  if (Array.isArray(sizeEntry) && sizeEntry.length >= 3) {
-    return (Math.abs(sizeEntry[0]) + Math.abs(sizeEntry[1]) + Math.abs(sizeEntry[2])) / 3;
+function makeEarTransformMatrix(skeleton, earRootName) {
+  const earRootBone = getBoneByName(skeleton, earRootName);
+  if (!earRootBone) {
+    return new THREE.Matrix4();
   }
-  if (typeof sizeEntry === "number") {
-    return Math.abs(sizeEntry);
-  }
-  return fallback;
+
+  const pivot = new THREE.Vector3().setFromMatrixPosition(earRootBone.matrixWorld);
+
+  const toOrigin = new THREE.Matrix4().makeTranslation(-pivot.x, -pivot.y, -pivot.z);
+  const fromOrigin = new THREE.Matrix4().makeTranslation(pivot.x, pivot.y, pivot.z);
+
+  const baseAngle = Math.PI / 4;
+  const isLeft = earRootName.toLowerCase().includes("left");
+  const tiltAngle = isLeft ? baseAngle : -baseAngle;
+
+  const rotate = new THREE.Matrix4().makeRotationZ(tiltAngle);
+  const flatten = new THREE.Matrix4().makeScale(1.5, 1.0, 0.18);
+
+  const m = new THREE.Matrix4();
+  m.copy(fromOrigin);
+  m.multiply(rotate);
+  m.multiply(flatten);
+  m.multiply(toOrigin);
+
+  return m;
 }
 
-function getBoneWorldPosition(bonesByName, name) {
-  const bone = bonesByName.get(name);
-  if (!bone) {
-    return null;
-  }
-  const pos = new THREE.Vector3();
-  bone.getWorldPosition(pos);
-  return pos;
-}
-
-function createSkinnedCylinder({
-  start,
-  end,
-  startIndex,
-  endIndex,
-  radius,
-  radialSegments = 12,
-  name = "segment",
-}) {
-  const direction = new THREE.Vector3().subVectors(end, start);
-  const length = direction.length();
-  const safeLength = length > 1e-5 ? length : radius * 0.5;
-  const height = safeLength;
-  const geometry = new THREE.CylinderGeometry(
-    radius,
-    radius,
-    height,
-    Math.max(3, radialSegments),
-    1,
-    true
-  );
-
-  const positionAttr = geometry.getAttribute("position");
-  const vertexCount = positionAttr ? positionAttr.count : 0;
-  const skinIndices = new Uint16Array(vertexCount * 4);
-  const skinWeights = new Float32Array(vertexCount * 4);
-
-  for (let i = 0; i < vertexCount; i += 1) {
-    const y = positionAttr.getY(i);
-    const t = THREE.MathUtils.clamp((y + height / 2) / height, 0, 1);
-    const base = i * 4;
-    skinIndices[base + 0] = startIndex;
-    skinIndices[base + 1] = endIndex;
-    skinIndices[base + 2] = 0;
-    skinIndices[base + 3] = 0;
-
-    skinWeights[base + 0] = 1 - t;
-    skinWeights[base + 1] = t;
-    skinWeights[base + 2] = 0;
-    skinWeights[base + 3] = 0;
-  }
-
-  geometry.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(skinIndices, 4));
-  geometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
-
-  // Align with the start->end vector and translate to midpoint.
-  const up = new THREE.Vector3(0, 1, 0);
-  const targetDir = length > 1e-5 ? direction.clone().normalize() : up.clone();
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(up, targetDir);
-  geometry.applyQuaternion(quaternion);
-
-  const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-  geometry.translate(midpoint.x, midpoint.y, midpoint.z);
-  geometry.name = name;
-
-  return geometry;
-}
-
-function createAttachedSphere({ center, radius, boneIndex, name }) {
-  const geometry = new THREE.SphereGeometry(radius, 18, 18);
-  geometry.translate(center.x, center.y, center.z);
-  geometry.name = name;
-
-  const positionAttr = geometry.getAttribute("position");
-  const vertexCount = positionAttr ? positionAttr.count : 0;
-  const skinIndices = new Uint16Array(vertexCount * 4);
-  const skinWeights = new Float32Array(vertexCount * 4);
-
-  for (let i = 0; i < vertexCount; i += 1) {
-    const base = i * 4;
-    skinIndices[base + 0] = boneIndex;
-    skinIndices[base + 1] = 0;
-    skinIndices[base + 2] = 0;
-    skinIndices[base + 3] = 0;
-    skinWeights[base + 0] = 1.0;
-    skinWeights[base + 1] = 0.0;
-    skinWeights[base + 2] = 0.0;
-    skinWeights[base + 3] = 0.0;
-  }
-
-  geometry.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(skinIndices, 4));
-  geometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
-  return geometry;
-}
-
-function createFlatQuad({
-  root,
-  size,
-  normal,
-  boneIndex,
-  name,
-}) {
-  const geometry = new THREE.PlaneGeometry(size.x, size.y, 1, 1);
-  geometry.lookAt(normal);
-  geometry.translate(root.x, root.y, root.z);
-  geometry.name = name;
-
-  const positionAttr = geometry.getAttribute("position");
-  const vertexCount = positionAttr ? positionAttr.count : 0;
-  const skinIndices = new Uint16Array(vertexCount * 4);
-  const skinWeights = new Float32Array(vertexCount * 4);
-
-  for (let i = 0; i < vertexCount; i += 1) {
-    const base = i * 4;
-    skinIndices[base + 0] = boneIndex;
-    skinWeights[base + 0] = 1.0;
-  }
-
-  geometry.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(skinIndices, 4));
-  geometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
-  return geometry;
-}
-
-/**
- * Generate a skinned elephant mesh from the live skeleton.
- */
 export function generateElephantMesh(skeletonResult, options = {}) {
   const { bones, skeleton, bonesByName, root: skeletonRootGroup } = skeletonResult;
   skeletonRootGroup.updateWorldMatrix(true, true);
   bones.forEach((bone) => bone.updateMatrixWorld(true));
 
-  const lowPoly = options.lowPoly === true;
-  const skinMaterial = createElephantSkinMaterial({ flatShading: lowPoly });
+  const lowPoly = options.lowPoly === true || options.runtimeOptions?.lowPoly === true;
 
-  const boneIndexByName = new Map();
-  bones.forEach((bone, index) => {
-    boneIndexByName.set(bone.name, index);
+  const lowPolyTorsoSegments =
+    typeof options.lowPolyTorsoSegments === "number" && options.lowPolyTorsoSegments >= 3
+      ? options.lowPolyTorsoSegments
+      : 9;
+
+  const lowPolyTorsoWeldTolerance =
+    typeof options.lowPolyTorsoWeldTolerance === "number" && options.lowPolyTorsoWeldTolerance > 0
+      ? options.lowPolyTorsoWeldTolerance
+      : 0.02;
+
+  const headSidesLowPoly =
+    typeof options.lowPolyHeadSides === "number" && options.lowPolyHeadSides >= 3
+      ? options.lowPolyHeadSides
+      : 12;
+
+  const trunkSidesLowPoly =
+    typeof options.lowPolyTrunkSides === "number" && options.lowPolyTrunkSides >= 3
+      ? options.lowPolyTrunkSides
+      : 10;
+
+  const neckSidesLowPoly =
+    typeof options.lowPolyNeckSides === "number" && options.lowPolyNeckSides >= 3
+      ? options.lowPolyNeckSides
+      : 12;
+
+  const tuskSidesLowPoly =
+    typeof options.lowPolyTuskSides === "number" && options.lowPolyTuskSides >= 3
+      ? options.lowPolyTuskSides
+      : 8;
+
+  const earSidesLowPoly =
+    typeof options.lowPolyEarSides === "number" && options.lowPolyEarSides >= 3
+      ? options.lowPolyEarSides
+      : 10;
+
+  const tailSidesLowPoly =
+    typeof options.lowPolyTailSides === "number" && options.lowPolyTailSides >= 3
+      ? options.lowPolyTailSides
+      : 8;
+
+  const legSidesLowPoly =
+    typeof options.lowPolyLegSides === "number" && options.lowPolyLegSides >= 3
+      ? options.lowPolyLegSides
+      : 9;
+
+  const seed = typeof options.variantSeed === "number" ? options.variantSeed : 0.5;
+  const random01 = (s) => Math.abs(Math.sin(s * 43758.5453)) % 1;
+  const variantFactor = random01(seed);
+  const legScale = 1.0 + (variantFactor - 0.5) * 0.2;
+  const tuskScale = 1.0 + (variantFactor - 0.5) * 0.3;
+  const headScale = 1.0 + (0.5 - variantFactor) * 0.15;
+  const headRadius = 0.95 * headScale;
+  const torsoRadiusProfile = makeElephantTorsoRadiusProfile(headScale);
+
+  const rearLegRadii = {
+    back_left_upper: 0.5 * legScale,
+    back_right_upper: 0.5 * legScale,
+    back_left_lower: 0.42 * legScale,
+    back_right_lower: 0.42 * legScale,
+    back_left_foot: 0.44 * legScale,
+    back_right_foot: 0.44 * legScale,
+  };
+
+  const torsoGeometry = generateTorsoGeometry(skeleton, {
+    bones: ["spine_base", "spine_mid", "spine_neck"],
+    radii: [1.15 * headScale, 1.35, 1.0 * headScale],
+    sides: 28,
+    radiusProfile: torsoRadiusProfile,
+    rumpBulgeDepth: 0.4,
+    extendRumpToRearLegs: {
+      bones: [
+        "back_left_foot",
+        "back_right_foot",
+        "back_left_lower",
+        "back_right_lower",
+        "back_left_upper",
+        "back_right_upper",
+      ],
+      extraMargin: 0.05,
+      boneRadii: rearLegRadii,
+    },
+    lowPoly,
+    lowPolySegments: lowPoly ? lowPolyTorsoSegments : undefined,
+    lowPolyWeldTolerance: lowPoly ? lowPolyTorsoWeldTolerance : 0,
   });
 
-  const geometries = [];
-  const sizes = ElephantDefinition.sizes || {};
-
-  const spineChain = ElephantDefinition.chains.spine;
-  for (let i = 0; i < spineChain.length - 1; i += 1) {
-    const a = spineChain[i];
-    const b = spineChain[i + 1];
-    const start = getBoneWorldPosition(bonesByName, a);
-    const end = getBoneWorldPosition(bonesByName, b);
-    if (!start || !end) continue;
-    const rA = averageSizeRadius(sizes[a], 0.9);
-    const rB = averageSizeRadius(sizes[b], 0.9);
-    const radius = Math.max(0.25, (rA + rB) * 0.5);
-    const geom = createSkinnedCylinder({
-      start,
-      end,
-      startIndex: boneIndexByName.get(a) ?? 0,
-      endIndex: boneIndexByName.get(b) ?? 0,
-      radius,
-      radialSegments: lowPoly ? 10 : 18,
-      name: `torso_${a}_${b}`,
-    });
-    geometries.push(geom);
-  }
-
-  const headCenter = getBoneWorldPosition(bonesByName, "head");
-  if (headCenter) {
-    const headRadius = averageSizeRadius(sizes.head, 0.85) * 0.9;
-    const headGeom = createAttachedSphere({
-      center: headCenter,
-      radius: headRadius,
-      boneIndex: boneIndexByName.get("head") ?? 0,
-      name: "head_sphere",
-    });
-    geometries.push(headGeom);
-  }
-
-  const trunkChain = ElephantDefinition.chains.trunk;
-  for (let i = 0; i < trunkChain.length - 1; i += 1) {
-    const a = trunkChain[i];
-    const b = trunkChain[i + 1];
-    const start = getBoneWorldPosition(bonesByName, a);
-    const end = getBoneWorldPosition(bonesByName, b);
-    if (!start || !end) continue;
-    const rA = averageSizeRadius(sizes[a], 0.2);
-    const rB = averageSizeRadius(sizes[b], 0.2);
-    const radius = Math.max(0.08, (rA + rB) * 0.5);
-    const geom = createSkinnedCylinder({
-      start,
-      end,
-      startIndex: boneIndexByName.get(a) ?? 0,
-      endIndex: boneIndexByName.get(b) ?? 0,
-      radius,
-      radialSegments: lowPoly ? 6 : 12,
-      name: `trunk_${a}_${b}`,
-    });
-    geometries.push(geom);
-  }
-
-  const tailChain = ElephantDefinition.chains.tail;
-  for (let i = 0; i < tailChain.length - 1; i += 1) {
-    const a = tailChain[i];
-    const b = tailChain[i + 1];
-    const start = getBoneWorldPosition(bonesByName, a);
-    const end = getBoneWorldPosition(bonesByName, b);
-    if (!start || !end) continue;
-    const radius = Math.max(0.04, averageSizeRadius(sizes[a], 0.08));
-    const geom = createSkinnedCylinder({
-      start,
-      end,
-      startIndex: boneIndexByName.get(a) ?? 0,
-      endIndex: boneIndexByName.get(b) ?? 0,
-      radius,
-      radialSegments: lowPoly ? 5 : 8,
-      name: `tail_${a}_${b}`,
-    });
-    geometries.push(geom);
-  }
-
-  const tuskChains = [ElephantDefinition.chains.tuskLeft, ElephantDefinition.chains.tuskRight];
-  tuskChains.forEach((chain, idx) => {
-    for (let i = 0; i < chain.length - 1; i += 1) {
-      const a = chain[i];
-      const b = chain[i + 1];
-      const start = getBoneWorldPosition(bonesByName, a);
-      const end = getBoneWorldPosition(bonesByName, b);
-      if (!start || !end) continue;
-      const radius = Math.max(0.05, averageSizeRadius(sizes[a], 0.1));
-      const geom = createSkinnedCylinder({
-        start,
-        end,
-        startIndex: boneIndexByName.get(a) ?? 0,
-        endIndex: boneIndexByName.get(b) ?? 0,
-        radius,
-        radialSegments: lowPoly ? 5 : 10,
-        name: `tusk_${idx}_${a}_${b}`,
-      });
-      geometries.push(geom);
-    }
+  const neckBaseRadius = 0.95 * headScale;
+  const neckRadiusAtHead = 0.4 * (0.95 * headScale);
+  const neckGeometry = generateNeckGeometry(skeleton, {
+    bones: ["spine_neck", "spine_head"],
+    radii: [neckBaseRadius, neckRadiusAtHead],
+    sides: lowPoly ? Math.max(neckSidesLowPoly, 10) : 18,
+    capBase: true,
+    capEnd: true,
   });
 
-  const earLeftRoot = getBoneWorldPosition(bonesByName, "ear_left");
-  if (earLeftRoot) {
-    const earRadius = averageSizeRadius(sizes.ear_left, 0.6);
-    const earGeom = createFlatQuad({
-      root: earLeftRoot,
-      size: new THREE.Vector2(earRadius * 1.6, earRadius * 1.2),
-      normal: new THREE.Vector3(0, 0.1, -1),
-      boneIndex: boneIndexByName.get("ear_left") ?? 0,
-      name: "ear_left_quad",
-    });
-    geometries.push(earGeom);
+  const tuskLeft = getBoneByName(skeleton, "tusk_left");
+  const tuskRight = getBoneByName(skeleton, "tusk_right");
+  let tuskSeparation = 0.6;
+  if (tuskLeft && tuskRight) {
+    const leftPos = new THREE.Vector3().setFromMatrixPosition(tuskLeft.matrixWorld);
+    const rightPos = new THREE.Vector3().setFromMatrixPosition(tuskRight.matrixWorld);
+    tuskSeparation = leftPos.distanceTo(rightPos);
   }
 
-  const earRightRoot = getBoneWorldPosition(bonesByName, "ear_right");
-  if (earRightRoot) {
-    const earRadius = averageSizeRadius(sizes.ear_right, 0.6);
-    const earGeom = createFlatQuad({
-      root: earRightRoot,
-      size: new THREE.Vector2(earRadius * 1.6, earRadius * 1.2),
-      normal: new THREE.Vector3(0, 0.1, -1),
-      boneIndex: boneIndexByName.get("ear_right") ?? 0,
-      name: "ear_right_quad",
-    });
-    geometries.push(earGeom);
-  }
+  const maxTrunkRadius = (tuskSeparation * 0.8) * 0.5;
+  const maxTrunkRadiusByHead = headRadius * 0.6;
 
-  const legChains = [
-    ElephantDefinition.chains.frontLegL,
-    ElephantDefinition.chains.frontLegR,
-    ElephantDefinition.chains.backLegL,
-    ElephantDefinition.chains.backLegR,
-  ];
-  legChains.forEach((chain) => {
-    for (let i = 0; i < chain.length - 1; i += 1) {
-      const a = chain[i];
-      const b = chain[i + 1];
-      const start = getBoneWorldPosition(bonesByName, a);
-      const end = getBoneWorldPosition(bonesByName, b);
-      if (!start || !end) continue;
-      const rA = averageSizeRadius(sizes[a], 0.35);
-      const rB = averageSizeRadius(sizes[b], 0.35);
-      const radius = Math.max(0.18, (rA + rB) * 0.5);
-      const geom = createSkinnedCylinder({
-        start,
-        end,
-        startIndex: boneIndexByName.get(a) ?? 0,
-        endIndex: boneIndexByName.get(b) ?? 0,
-        radius,
-        radialSegments: lowPoly ? 7 : 12,
-        name: `leg_${a}_${b}`,
-      });
-      geometries.push(geom);
-    }
+  const defaultTrunkBaseRadius = 0.46;
+  const defaultTrunkMidRadius =
+    typeof options.trunkMidRadius === "number" ? options.trunkMidRadius : 0.07;
+  const defaultTrunkTipRadius = 0.26;
+
+  const trunkBaseRadius = Math.min(defaultTrunkBaseRadius, maxTrunkRadius, maxTrunkRadiusByHead);
+  const trunkMidRadius = Math.min(defaultTrunkMidRadius, maxTrunkRadius, maxTrunkRadiusByHead);
+  const trunkTipRadius = Math.min(defaultTrunkTipRadius, maxTrunkRadius, maxTrunkRadiusByHead);
+
+  const trunkRootBoneName = getBoneByName(skeleton, "trunk_anchor")
+    ? "trunk_anchor"
+    : getBoneByName(skeleton, "trunk_root")
+      ? "trunk_root"
+      : "trunk_root";
+
+  const headGeometry = generateHeadGeometry(skeleton, {
+    parentBone: "head",
+    radius: headRadius,
+    elongation: 1.0,
+    detail: lowPoly ? 0 : 1,
   });
 
-  if (geometries.length === 0) {
-    return { mesh: null };
-  }
+  const trunkGeometry = generateNoseGeometry(skeleton, {
+    bones: ["trunk_base", "trunk_mid1", "trunk_mid2", "trunk_tip"],
+    rootBone: trunkRootBoneName,
+    sides: lowPoly ? Math.max(trunkSidesLowPoly, 12) : 24,
+    baseRadius: trunkBaseRadius,
+    midRadius: trunkMidRadius,
+    tipRadius: trunkTipRadius,
+    partName: "trunk",
+    runtimeOptions: { lowPoly },
+  });
 
-  const mergedGeometry = mergeGeometries(geometries, true);
+  const leftTusk = generateNoseGeometry(skeleton, {
+    rootBone: "head_tip_3",
+    bones: ["tusk_left", "tusk_left_tip"],
+    sides: lowPoly ? tuskSidesLowPoly : 16,
+    baseRadius: 0.12,
+    tipRadius: 0.02,
+    lengthScale: tuskScale,
+    partName: "tusk_left",
+    runtimeOptions: { lowPoly },
+  });
+
+  const rightTusk = generateNoseGeometry(skeleton, {
+    rootBone: "head_tip_4",
+    bones: ["tusk_right", "tusk_right_tip"],
+    sides: lowPoly ? tuskSidesLowPoly : 16,
+    baseRadius: 0.12,
+    tipRadius: 0.02,
+    lengthScale: tuskScale,
+    partName: "tusk_right",
+    runtimeOptions: { lowPoly },
+  });
+
+  const leftEar = generateLimbGeometry(skeleton, {
+    bones: ["ear_left", "ear_left_tip"],
+    radii: [0.65, 0.35],
+    sides: lowPoly ? earSidesLowPoly : 20,
+    partName: "ear_left",
+  });
+
+  const rightEar = generateLimbGeometry(skeleton, {
+    bones: ["ear_right", "ear_right_tip"],
+    radii: [0.65, 0.35],
+    sides: lowPoly ? earSidesLowPoly : 20,
+    partName: "ear_right",
+  });
+
+  const leftEarMatrix = makeEarTransformMatrix(skeleton, "ear_left");
+  const rightEarMatrix = makeEarTransformMatrix(skeleton, "ear_right");
+  leftEar.applyMatrix4(leftEarMatrix);
+  rightEar.applyMatrix4(rightEarMatrix);
+  leftEar.computeVertexNormals();
+  rightEar.computeVertexNormals();
+
+  const tailGeometry = generateTailGeometry(skeleton, {
+    bones: ["tail_base", "tail_mid", "tail_tip"],
+    sides: lowPoly ? tailSidesLowPoly : 14,
+    baseRadius: 0.15,
+    tipRadius: 0.05,
+    partName: "tail",
+    runtimeOptions: { lowPoly },
+  });
+
+  const legConfig = {
+    sides: lowPoly ? legSidesLowPoly : 20,
+    runtimeOptions: { lowPoly },
+  };
+
+  const fl = generateLimbGeometry(skeleton, {
+    bones: ["front_left_collarbone", "front_left_upper", "front_left_lower", "front_left_foot"],
+    radii: [0.5 * legScale, 0.45 * legScale, 0.4 * legScale, 0.38 * legScale, 0.43 * legScale],
+    partName: "front_left_leg",
+    ...legConfig,
+  });
+
+  const fr = generateLimbGeometry(skeleton, {
+    bones: ["front_right_collarbone", "front_right_upper", "front_right_lower", "front_right_foot"],
+    radii: [0.5 * legScale, 0.45 * legScale, 0.4 * legScale, 0.38 * legScale, 0.43 * legScale],
+    partName: "front_right_leg",
+    ...legConfig,
+  });
+
+  const bl = generateLimbGeometry(skeleton, {
+    bones: ["back_left_pelvis", "back_left_upper", "back_left_lower", "back_left_foot"],
+    radii: [0.55 * legScale, 0.5 * legScale, 0.42 * legScale, 0.38 * legScale, 0.44 * legScale],
+    partName: "back_left_leg",
+    ...legConfig,
+  });
+
+  const br = generateLimbGeometry(skeleton, {
+    bones: ["back_right_pelvis", "back_right_upper", "back_right_lower", "back_right_foot"],
+    radii: [0.55 * legScale, 0.5 * legScale, 0.42 * legScale, 0.38 * legScale, 0.44 * legScale],
+    partName: "back_right_leg",
+    ...legConfig,
+  });
+
+  const mergedGeometry = mergeGeometries(
+    [
+      torsoGeometry,
+      neckGeometry,
+      headGeometry,
+      trunkGeometry,
+      leftTusk,
+      rightTusk,
+      leftEar,
+      rightEar,
+      tailGeometry,
+      fl,
+      fr,
+      bl,
+      br,
+    ].map((geometry) => ensureSkinAttributes(geometry, { makeNonIndexed: true })),
+    false
+  );
+
   mergedGeometry.computeBoundingBox();
   mergedGeometry.computeBoundingSphere();
 
+  const skinMaterial = createElephantSkinMaterial({ flatShading: lowPoly });
   const mesh = new THREE.SkinnedMesh(mergedGeometry, skinMaterial);
   mesh.name = `${ElephantDefinition.name}_SkinnedMesh`;
   mesh.add(skeletonRootGroup);
   mesh.bind(skeleton);
 
-  return { mesh };
+  return { mesh, mergedGeometry };
 }
 
 export default generateElephantMesh;

@@ -1,6 +1,6 @@
 // src/animals/Elephant/ElephantLocomotion.js
 
-import * as THREE from 'three';
+import * as THREE from '../frontend/node_modules/three/build/three.module.js';
 
 /**
  * ElephantLocomotion
