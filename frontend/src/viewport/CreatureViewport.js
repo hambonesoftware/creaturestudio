@@ -156,24 +156,24 @@ class CreatureViewport {
   }
 
   _buildAllAroundLighting(group) {
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x2c3a52, 3.4);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x2c3a52, 6.4);
     hemi.position.set(0, 7, 0);
     group.add(hemi);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 1.65);
+    const ambient = new THREE.AmbientLight(0xffffff, 4.65);
     group.add(ambient);
 
-    const north = new THREE.DirectionalLight(0xf5f8ff, 1.85);
+    const north = new THREE.DirectionalLight(0xf5f8ff, 4.85);
     north.position.set(0, 12, 6);
     north.castShadow = true;
     north.shadow.mapSize.set(1024, 1024);
     group.add(north);
 
-    const west = new THREE.DirectionalLight(0xf5f8ff, 1.35);
+    const west = new THREE.DirectionalLight(0xf5f8ff, 4.35);
     west.position.set(-6.5, 9, -3.5);
     group.add(west);
 
-    const east = new THREE.DirectionalLight(0xf5f8ff, 1.25);
+    const east = new THREE.DirectionalLight(0xf5f8ff, 4.25);
     east.position.set(6.5, 9, -3.5);
     group.add(east);
   }
