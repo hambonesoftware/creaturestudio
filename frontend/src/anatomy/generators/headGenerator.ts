@@ -1,9 +1,9 @@
-// Head generator
+// Head generator stub.
 //
 // Creates a head mesh (e.g. skull, dome) anchored at the end of a
-// neck chain. The head is generated as an icosahedron (optionally
-// subdivided) aligned along the chain direction, positioned at the
-// tip, and skinned to the last bone in the chain.
+// neck chain. Future implementation may use icosahedron subdivision
+// or other primitive shapes. Skinning will typically weight the
+// geometry entirely to the head bone.
 
 import * as THREE from 'three';
 import { AnatomyChain, HeadOptions, AnatomyGenerator } from '../core/types.js';
@@ -11,33 +11,28 @@ import { sampleChainPositions } from '../core/chains.js';
 import { assignSingleBoneSkin } from '../core/skinning.js';
 
 export const generateHeadGeometry: AnatomyGenerator<HeadOptions> = ({ skeleton, chain, options }) => {
-  // Determine the position of the head.  Use the first bone in the
-  // chain (usually the head bone) as the anchor.  If there are
-  // multiple bones, use the last one as the head tip and orient the
-  // sphere along the chain.
-  const positions = sampleChainPositions(chain, skeleton);
-  const headPos = positions[positions.length - 1].clone();
-  const basePos = positions[0].clone();
-  const dir = headPos.clone().sub(basePos);
-  // Choose a radius and detail for the head
-  const radius = options.radius ?? 0.5;
-  const detail = options.detail ?? 0;
-  // Create an icosahedron geometry for the head
-  const geo = new THREE.IcosahedronGeometry(radius, detail);
-  // Rotate the head so that its Z axis aligns with the direction of the neck
-  if (dir.lengthSq() > 1e-6) {
-    const defaultAxis = new THREE.Vector3(0, 1, 0);
-    const quaternion = new THREE.Quaternion().setFromUnitVectors(defaultAxis.normalize(), dir.clone().normalize());
-    geo.applyQuaternion(quaternion);
+  // Determine the attachment point for the head: use the last bone in
+  // the chain. If there are no bones, return an empty geometry.
+  const points = sampleChainPositions(chain, skeleton);
+  if (points.length === 0) {
+    return { geometry: new THREE.BufferGeometry(), meta: undefined };
   }
-  // Translate geometry to head position
-  geo.translate(headPos.x, headPos.y, headPos.z);
-  // Skinning: assign all vertices to the last bone in the chain
-  const vertexCount = (geo.getAttribute('position').array.length) / 3;
-  const { skinIndices, skinWeights } = assignSingleBoneSkin(chain.boneNames.length - 1, vertexCount);
-  // Create BufferGeometry to attach skin indices
-  const geometry = new THREE.BufferGeometry().copy(geo as any);
-  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
-  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
-  return { geometry, meta: undefined };
+  const tip = points[points.length - 1];
+  // Choose a radius; default to 0.3 if none provided.
+  const radius = options?.radius ?? 0.3;
+  // Use IcosahedronGeometry for a reasonably smooth sphere; detail
+  // controls subdivision level.
+  const detail = options?.detail ?? 1;
+  const sphere = new THREE.IcosahedronGeometry(radius, detail);
+  // Offset the sphere so its centre is at the tip of the neck. Some
+  // creatures may prefer to offset along the chain direction; this
+  // simple implementation attaches the head directly at the tip.
+  sphere.translate(tip.x, tip.y, tip.z);
+  // Assign skinning: weight all vertices to the last bone.
+  const vertexCount = sphere.getAttribute('position').count;
+  const { skinIndices, skinWeights } = assignSingleBoneSkin(points.length - 1, vertexCount);
+  sphere.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
+  sphere.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+  sphere.computeVertexNormals();
+  return { geometry: sphere, meta: undefined };
 };

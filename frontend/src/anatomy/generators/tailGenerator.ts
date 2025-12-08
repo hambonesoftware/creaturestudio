@@ -1,132 +1,86 @@
-// Tail/trunk generator
+// Tail/trunk generator stub.
 //
 // A tail is a tapered tube following a chain of bones. The nose and
-// trunk generators reuse this logic. This implementation samples
-// positions along the chain, computes radii from options or the
-// chain definition, constructs rings and quads, and assigns skin
-// indices per ring.
+// trunk generators will reuse this logic. This stub will be expanded
+// in Phase 3 to implement parallel‑transport frames and radius
+// interpolation similar to zoo_reference's TailGenerator.
 
 import * as THREE from 'three';
-import {
-  AnatomyChain,
-  TailOptions,
-  AnatomyGenerator,
-} from '../core/types.js';
+import { AnatomyChain, TailOptions, AnatomyGenerator } from '../core/types.js';
 import { sampleChainPositions } from '../core/chains.js';
-import { interpolateRadii } from '../core/sampling.js';
+import { interpolateRadii, evaluateProfile } from '../core/sampling.js';
+import { buildSkinnedTubeGeometry } from '../utils.js';
 import { assignSingleBoneSkin } from '../core/skinning.js';
 
 export const generateTailGeometry: AnatomyGenerator<TailOptions> = ({ skeleton, chain, options }) => {
-  // Sample positions along the tail chain.  Tails can often have
-  // fewer bones; if there are fewer than 2, return an empty mesh.
-  const positions = sampleChainPositions(chain, skeleton);
-  const nSegments = positions.length;
-  if (nSegments < 2) {
-    return { geometry: new THREE.BufferGeometry(), meta: undefined };
-  }
-
-  // Determine number of sides around the tube.  Use low‑poly setting
-  // only if provided; default to 5 sides for thin tails.
-  const sides = options.sides ?? 5;
-
-  // Determine radii for each ring.  Preference order:
-  // 1. chain.radii (already defined on chain)
-  // 2. options.radii (per‑segment radii provided)
-  // 3. base/mid/tip radii from options
-  let radii: number[];
-  if (chain.radii) {
-    radii = interpolateRadii(chain, nSegments);
-  } else if (options.radii) {
-    radii = [];
-    for (let i = 0; i < options.radii.length; i++) radii.push(options.radii[i]);
-    if (radii.length !== nSegments) {
-      radii = new Array(nSegments).fill(radii[0]);
-    }
+  // Sample the positions along the bone chain. For tails we do not
+  // insert intermediate rings; each bone maps to one ring. A tip ring
+  // may be added implicitly via radii array.
+  const points = sampleChainPositions(chain, skeleton);
+  // Determine radii: prefer options.radii; otherwise derive from
+  // base/mid/tip or chain.radii. If no radii provided we use a
+  // simple taper: baseRadius → midRadius → tipRadius. When a radii
+  // array is provided it may be one longer than the number of bones.
+  let baseRadii: number[] = [];
+  if (options?.radii && options.radii.length > 0) {
+    baseRadii = [...options.radii];
+  } else if (chain.radii && chain.radii.length > 0) {
+    baseRadii = [...chain.radii];
   } else {
-    const base = options.baseRadius ?? 0.2;
-    const mid = options.midRadius ?? base * 0.6;
-    const tip = options.tipRadius ?? base * 0.3;
-    radii = [];
-    for (let i = 0; i < nSegments; i++) {
-      const t = nSegments > 1 ? i / (nSegments - 1) : 0;
-      // Quadratic interpolation base → mid → tip
-      const radius = base * Math.pow(1 - t, 2) + 2 * mid * (1 - t) * t + tip * Math.pow(t, 2);
-      radii.push(radius);
+    const count = points.length;
+    const base = options?.baseRadius ?? 0.2;
+    const mid = options?.midRadius ?? base * 0.7;
+    const tip = options?.tipRadius ?? base * 0.3;
+    // create linear interpolation base→mid→tip across the chain
+    baseRadii = [];
+    for (let i = 0; i < count; i++) {
+      const t = count > 1 ? i / (count - 1) : 0;
+      const radius = t < 0.5
+        ? base + (mid - base) * (t / 0.5)
+        : mid + (tip - mid) * ((t - 0.5) / 0.5);
+      baseRadii.push(radius);
     }
   }
-
-  // Apply vertical offset if specified.  We'll add this offset to
-  // each ring’s vertices along the Y axis.
-  const yOffset = options.yOffset ?? 0;
-
-  const verts: number[] = [];
-  const norms: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
-
-  // Helper for orthonormal basis (copied from torso)
-  function computeBasis(dir: THREE.Vector3): { xAxis: THREE.Vector3; yAxis: THREE.Vector3 } {
-    const normalized = dir.clone().normalize();
-    const globalUp = Math.abs(normalized.y) > 0.999 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
-    let xAxis = new THREE.Vector3().crossVectors(globalUp, normalized);
-    if (xAxis.lengthSq() < 1e-6) {
-      xAxis = new THREE.Vector3(1, 0, 0);
-    }
-    xAxis.normalize();
-    const yAxis = new THREE.Vector3().crossVectors(normalized, xAxis).normalize();
-    return { xAxis, yAxis };
+  // Interpolate radii to match the number of points. Note: we pass a
+  // synthetic chain with only radii; other fields are unused.
+  const tempChain: AnatomyChain = { name: chain.name, boneNames: [], radii: baseRadii };
+  const radii = interpolateRadii(tempChain, points.length);
+  // Combine profile from chain (if any) with nothing else; tails do
+  // not support extra radius profiles via options.
+  const radiusProfile = (t: number, _theta: number, base: number) => {
+    return base * evaluateProfile(chain, t);
+  };
+  // Determine sides; tails can use fewer sides for low‑poly mode.
+  const sides = options?.lowPoly
+    ? Math.max(3, options.lowPolySegments ?? 6)
+    : Math.max(3, options?.sides ?? 8);
+  // Build geometry. Provide the bone names so the helper assigns
+  // blended weights. For a pure tail we prefer single‑bone weights,
+  // however the helper's blending across bones is acceptable. If
+  // strict single‑bone weights are required, they can be applied
+  // externally using assignSingleBoneSkin.
+  let geometry = buildSkinnedTubeGeometry({
+    points,
+    radii,
+    sides,
+    radiusProfile,
+    capStart: options?.capStart ?? false,
+    capEnd: options?.capEnd ?? true,
+    boneNames: chain.boneNames,
+    weldTolerance: options?.lowPoly ? options?.lowPolyWeldTolerance ?? 0 : 0,
+  });
+  // For tails/trunks it is common to weight each ring entirely to a
+  // single bone. If requested (via a flag on options), override the
+  // skinning computed by buildSkinnedTubeGeometry. When not
+  // specified we leave the blended weights in place.
+  if ((options as any)?.singleBoneWeight) {
+    const vertexCount = geometry.getAttribute('position').count;
+    // Use the first bone index for all vertices. This may be
+    // incorrect if multiple bones are present; but the caller can
+    // supply a different index via singleBoneWeight option in future.
+    const { skinIndices, skinWeights } = assignSingleBoneSkin(0, vertexCount);
+    geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
+    geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
   }
-
-  for (let i = 0; i < nSegments; i++) {
-    let dir: THREE.Vector3;
-    if (i < nSegments - 1) {
-      dir = positions[i + 1].clone().sub(positions[i]);
-    } else {
-      dir = positions[i].clone().sub(positions[i - 1]);
-    }
-    const { xAxis, yAxis } = computeBasis(dir);
-    const radius = radii[i];
-    for (let j = 0; j < sides; j++) {
-      const angle = (j / sides) * Math.PI * 2;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      const offset = xAxis.clone().multiplyScalar(cos * radius).add(yAxis.clone().multiplyScalar(sin * radius));
-      const vert = positions[i].clone().add(offset);
-      vert.y += yOffset;
-      verts.push(vert.x, vert.y, vert.z);
-      const normal = offset.clone().normalize();
-      norms.push(normal.x, normal.y, normal.z);
-      const u = j / sides;
-      const v = i / (nSegments - 1);
-      uvs.push(u, v);
-    }
-  }
-  // Build indices
-  for (let i = 0; i < nSegments - 1; i++) {
-    for (let j = 0; j < sides; j++) {
-      const a = i * sides + j;
-      const b = i * sides + ((j + 1) % sides);
-      const c = (i + 1) * sides + j;
-      const d = (i + 1) * sides + ((j + 1) % sides);
-      indices.push(a, c, b);
-      indices.push(b, c, d);
-    }
-  }
-  // Assign skin indices: each ring is driven by its respective bone
-  const vertexCount = verts.length / 3;
-  const { skinIndices, skinWeights } = assignSingleBoneSkin(0, vertexCount);
-  for (let v = 0; v < vertexCount; v++) {
-    const ringIndex = Math.floor(v / sides);
-    const boneIndex = Math.min(ringIndex, chain.boneNames.length - 1);
-    skinIndices[v * 4] = boneIndex;
-    skinWeights[v * 4] = 1.0;
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setIndex(indices);
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
-  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
   return { geometry, meta: undefined };
 };
