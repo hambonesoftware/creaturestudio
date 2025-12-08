@@ -37,12 +37,29 @@ export const generateTorsoGeometry: AnatomyGenerator<TorsoOptions> = ({ skeleton
   // shapes such as wider hips or a tapered neck. The rumpBulgeDepth
   // option is ignored for now; more advanced algorithms would
   // inflate the initial rings accordingly.
-  const radiusProfile = (t: number, _theta: number, base: number) => {
-    const profileA = evaluateProfile(chain, t);
-    const profileB = typeof options?.radiusProfile === 'function'
-      ? (options as TorsoOptions).radiusProfile!(t)
-      : 1;
-    return base * profileA * profileB;
+  const radiusProfile = (t: number, theta: number, base: number) => {
+    // Apply the chain's own profile first
+    let baseRadius = base * evaluateProfile(chain, t);
+    const extra = (options as any)?.radiusProfile;
+    if (typeof extra === 'function') {
+      try {
+        const val = extra(t, theta, baseRadius);
+        if (typeof val === 'number') {
+          return val;
+        }
+      } catch (_err) {
+        // Fallback: call with single argument t
+        try {
+          const v1 = extra(t);
+          if (typeof v1 === 'number') {
+            baseRadius = baseRadius * v1;
+          }
+        } catch (__err) {
+          // ignore
+        }
+      }
+    }
+    return baseRadius;
   };
   const geometry = buildSkinnedTubeGeometry({
     points,

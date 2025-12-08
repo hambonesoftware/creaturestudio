@@ -57,12 +57,31 @@ export const generateLimbGeometry: AnatomyGenerator<LimbOptions> = ({ skeleton, 
   // buildSkinnedTubeGeometry helper accepts a callback which
   // transforms the base radius per point. Here we multiply both
   // profiles together.
-  const radiusProfile = (t: number, _theta: number, base: number) => {
-    const profileA = evaluateProfile(chain, t);
-    const extraProfile = typeof (options as any)?.radiusProfile === 'function'
-      ? (options as any).radiusProfile(t)
-      : 1;
-    return base * profileA * extraProfile;
+  const radiusProfile = (t: number, theta: number, base: number) => {
+    // Apply any chain-level profile first (e.g. taper)
+    let baseRadius = base * evaluateProfile(chain, t);
+    const extra = (options as any)?.radiusProfile;
+    if (typeof extra === 'function') {
+      // Support radius profile callbacks that accept 1, 2 or 3 parameters.
+      try {
+        const val = extra(t, theta, baseRadius);
+        // If the function returns a number, use it directly.
+        if (typeof val === 'number') {
+          return val;
+        }
+      } catch (_err) {
+        // Fallback to multiplying baseRadius by function evaluated at t
+        try {
+          const v1 = extra(t);
+          if (typeof v1 === 'number') {
+            baseRadius = baseRadius * v1;
+          }
+        } catch (__err) {
+          // ignore
+        }
+      }
+    }
+    return baseRadius;
   };
 
   // Build the geometry using the shared tube helper. Pass cap flags

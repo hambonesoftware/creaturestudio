@@ -16,6 +16,21 @@ import { generateHeadGeometry } from '../anatomy/generators/headGenerator.ts';
 import { generateNoseGeometry } from '../anatomy/generators/noseGenerator.ts';
 import { generateEarGeometry } from '../anatomy/generators/earGenerator.ts';
 
+// Import any known radius profile factories. These map human‑readable
+// names used in blueprints (e.g. "elephant_heavy") to functions
+// returning a radius profile callback. If you add new species‑specific
+// profiles, register them here. See zoo_reference Elephant for
+// reference implementations.
+import { makeElephantTorsoRadiusProfile } from '../animals/Elephant/ElephantTorsoProfile.js';
+
+// Map blueprint radiusProfile names to factory functions. Factories
+// return the actual (t, theta, baseRadius) callback used by
+// buildSkinnedTubeGeometry. When adding new profiles, update this
+// object accordingly.
+const V2_RADIUS_PROFILE_FACTORIES = {
+  elephant_heavy: () => makeElephantTorsoRadiusProfile(1.0),
+};
+
 /*
  * Generator registry mapping blueprint generator keys to implementation functions.
  * These names align with the generator property in BodyPartDefinition entries.
@@ -93,6 +108,18 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
     };
     // Prepare options; clone to avoid mutating blueprint data.
     const opts = part.options ? { ...part.options } : {};
+    // Interpret radiusProfile strings: map to registered factory functions.
+    if (typeof opts.radiusProfile === 'string') {
+      const name = opts.radiusProfile;
+      const factory = V2_RADIUS_PROFILE_FACTORIES[name];
+      if (typeof factory === 'function') {
+        try {
+          opts.radiusProfile = factory();
+        } catch (err) {
+          console.warn('[buildCreatureFromBlueprintV2] Failed to instantiate radius profile', name, err);
+        }
+      }
+    }
     // Call the generator.
     let result;
     try {
