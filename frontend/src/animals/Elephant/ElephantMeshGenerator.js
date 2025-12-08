@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-import { generateTorsoGeometry } from "../../anatomy/TorsoGenerator.js";
-import { generateNeckGeometry } from "../../anatomy/NeckGenerator.js";
-import { generateHeadGeometry } from "../../anatomy/HeadGenerator.js";
-import { generateTailGeometry } from "../../anatomy/TailGenerator.js";
-import { generateNoseGeometry } from "../../anatomy/NoseGenerator.js";
-import { generateLimbGeometry } from "../../anatomy/LimbGenerator.js";
+// Use the bodyParts generators (ring-based) mirrored from the Zoo pipeline.
+import { generateTorsoGeometry } from "../bodyParts/TorsoGenerator.js";
+import { generateNeckGeometry } from "../bodyParts/NeckGenerator.js";
+import { generateHeadGeometry } from "../bodyParts/HeadGenerator.js";
+import { generateTailGeometry } from "../bodyParts/TailGenerator.js";
+import { generateNoseGeometry } from "../bodyParts/NoseGenerator.js";
+import { generateLimbGeometry } from "../bodyParts/LimbGenerator.js";
 import { ensureSkinAttributes, getBoneByName } from "../../anatomy/utils.js";
 
 import { ElephantDefinition } from "./ElephantDefinition.js";

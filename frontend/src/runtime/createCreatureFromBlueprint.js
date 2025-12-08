@@ -3,6 +3,7 @@ import { buildCreatureFromBlueprint } from "./BlueprintCreatureRuntime.js";
 // defines `chainsV2` and `bodyPartsV2` arrays, signalling that it
 // follows the generalised anatomy pipeline introduced in version 2.1.
 import { buildCreatureFromBlueprintV2 } from "./CreatureRuntimeV2.js";
+import { buildElephantFromBodyParts } from "./buildElephantFromBodyParts.js";
 
 /**
  * High-level runtime entry: create a creature from a SpeciesBlueprint.
@@ -17,6 +18,12 @@ import { buildCreatureFromBlueprintV2 } from "./CreatureRuntimeV2.js";
  *   }
  */
 export function createCreatureFromBlueprint(blueprint, options = {}) {
+  const speciesName = blueprint?.meta?.name || blueprint?.meta?.speciesName || "";
+  const isElephant = speciesName.toLowerCase() === "elephant";
+
+  if (isElephant) {
+    return buildElephantFromBodyParts(blueprint, options);
+  }
   // If the blueprint defines the new V2 anatomy fields, use the V2 builder.
   if (blueprint && Array.isArray(blueprint.chainsV2) && Array.isArray(blueprint.bodyPartsV2)) {
     return buildCreatureFromBlueprintV2(blueprint, options);
