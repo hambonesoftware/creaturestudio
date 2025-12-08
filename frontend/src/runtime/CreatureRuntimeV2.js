@@ -2,19 +2,18 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildSkeletonFromBlueprint } from './buildSkeletonFromBlueprint.js';
 
-// Import the general anatomy generators implemented in Phase 3.
-// These functions build meshes for each body part using the V2 anatomy
-// abstractions. See `frontend/src/anatomy/generators` for details.
-// Import TypeScript modules directly; Vite handles `.ts` extensions.  Using
-// `.js` here would cause rollup to fail because no compiled JS files
-// exist in the generators directory.
-import { generateTorsoGeometry } from '../anatomy/generators/torsoGenerator.ts';
-import { generateLimbGeometry } from '../anatomy/generators/limbGenerator.ts';
-import { generateWingGeometry } from '../anatomy/generators/wingGenerator.ts';
-import { generateTailGeometry } from '../anatomy/generators/tailGenerator.ts';
-import { generateHeadGeometry } from '../anatomy/generators/headGenerator.ts';
-import { generateNoseGeometry } from '../anatomy/generators/noseGenerator.ts';
-import { generateEarGeometry } from '../anatomy/generators/earGenerator.ts';
+// Import the general anatomy generators implemented in Phase 3 from the
+// canonical bodyParts location so all pipelines go through the same files.
+// Import TypeScript modules directly; Vite handles `.ts` extensions. Using
+// `.js` here would cause rollup to fail because no compiled JS files exist
+// in the generators directory.
+import { generateTorsoGeometry } from '../animals/bodyParts/v2/torsoGenerator.ts';
+import { generateLimbGeometry } from '../animals/bodyParts/v2/limbGenerator.ts';
+import { generateWingGeometry } from '../animals/bodyParts/v2/wingGenerator.ts';
+import { generateTailGeometry } from '../animals/bodyParts/v2/tailGenerator.ts';
+import { generateHeadGeometry } from '../animals/bodyParts/v2/headGenerator.ts';
+import { generateNoseGeometry } from '../animals/bodyParts/v2/noseGenerator.ts';
+import { generateEarGeometry } from '../animals/bodyParts/v2/earGenerator.ts';
 
 // Import any known radius profile factories. These map human‑readable
 // names used in blueprints (e.g. "elephant_heavy") to functions

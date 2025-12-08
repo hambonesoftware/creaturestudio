@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-import { generateTorsoGeometry } from "../anatomy/TorsoGenerator.js";
-import { generateNeckGeometry } from "../anatomy/NeckGenerator.js";
-import { generateHeadGeometry } from "../anatomy/HeadGenerator.js";
-import { generateTailGeometry } from "../anatomy/TailGenerator.js";
-import { generateNoseGeometry } from "../anatomy/NoseGenerator.js";
-import { generateLimbGeometry } from "../anatomy/LimbGenerator.js";
-import { generateEarGeometry } from "../anatomy/EarGenerator.js";
+import { generateTorsoGeometry } from "../animals/bodyParts/TorsoGenerator.js";
+import { generateNeckGeometry } from "../animals/bodyParts/NeckGenerator.js";
+import { generateHeadGeometry } from "../animals/bodyParts/HeadGenerator.js";
+import { generateTailGeometry } from "../animals/bodyParts/TailGenerator.js";
+import { generateNoseGeometry } from "../animals/bodyParts/NoseGenerator.js";
+import { generateLimbGeometry } from "../animals/bodyParts/LimbGenerator.js";
+import { generateEarGeometry } from "../animals/bodyParts/EarGenerator.js";
 import { ensureSkinAttributes } from "../anatomy/utils.js";
 import { makeElephantTorsoRadiusProfile } from "../animals/Elephant/ElephantTorsoProfile.js";
 
