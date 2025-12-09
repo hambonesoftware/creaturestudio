@@ -22,7 +22,7 @@ import { dirname, resolve } from "node:path";
 import fs from "node:fs/promises";
 
 import * as THREE from "three";
-import { buildCreatureFromBlueprint } from "../src/runtime/BlueprintCreatureRuntime.js";
+import { createCreatureFromBlueprint } from "../src/runtime/createCreatureFromBlueprint.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,7 +42,7 @@ async function main() {
     "Blueprint.meta.name should be a non-empty string",
   );
 
-  const result = buildCreatureFromBlueprint(blueprint);
+  const result = createCreatureFromBlueprint(blueprint, { useAnatomyV2: true });
 
   assert.ok(result, "createCreatureFromBlueprint should return an object");
   const { root, mesh, skeleton, bones, skeletonRoot } = result;

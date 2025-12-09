@@ -62,11 +62,30 @@ class GenericQuadrupedController {
 
   _deriveLegChains(blueprint) {
     const chains = blueprint?.chains || {};
+    const chainList = Array.isArray(blueprint?.chainsV2) ? blueprint.chainsV2 : [];
+    const resolveChain = (name) => {
+      if (Array.isArray(chains[name])) {
+        return chains[name];
+      }
+      const v2 = chainList.find((c) => c && c.name === name);
+      if (v2 && Array.isArray(v2.bones)) {
+        return v2.bones;
+      }
+      if (v2 && Array.isArray(v2.boneNames)) {
+        return v2.boneNames;
+      }
+      return [];
+    };
+    const frontLeft = resolveChain('frontLegL');
+    const frontRight = resolveChain('frontLegR');
+    const backLeft = resolveChain('backLegL');
+    const backRight = resolveChain('backLegR');
+
     return [
-      { bones: chains.frontLegL || chains.frontLeft, phase: 0.0 },
-      { bones: chains.frontLegR || chains.frontRight, phase: 0.5 },
-      { bones: chains.backLegL || chains.backLeft, phase: 0.25 },
-      { bones: chains.backLegR || chains.backRight, phase: 0.75 },
+      { bones: frontLeft.length ? frontLeft : resolveChain('frontLeft'), phase: 0.0 },
+      { bones: frontRight.length ? frontRight : resolveChain('frontRight'), phase: 0.5 },
+      { bones: backLeft.length ? backLeft : resolveChain('backLeft'), phase: 0.25 },
+      { bones: backRight.length ? backRight : resolveChain('backRight'), phase: 0.75 },
     ].filter((entry) => Array.isArray(entry.bones) && entry.bones.length > 0);
   }
 

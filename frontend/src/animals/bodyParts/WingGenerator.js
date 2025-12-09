@@ -1,1 +1,1 @@
-export { generateWingGeometry } from "../../anatomy/generators/wingGenerator.ts";
+export { generateWingGeometry } from "../../anatomy/generators/wingGenerator.js";
