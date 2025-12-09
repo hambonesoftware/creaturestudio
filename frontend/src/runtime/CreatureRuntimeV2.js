@@ -3,16 +3,18 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { buildSkeletonFromBlueprint } from './buildSkeletonFromBlueprint.js';
 import { ensureSkinAttributes } from '../anatomy/utils.js';
 import { createBehaviorControllerForBlueprint } from '../behavior/BehaviorRegistry.js';
+import { validateAnatomyV2 } from './validateAnatomyV2.js';
 
 // Import the general anatomy generators implemented in Phase 3 from the
-// canonical bodyParts location so all pipelines go through the same files.
-import { generateTorsoGeometry } from '../animals/bodyParts/TorsoGenerator.js';
-import { generateLimbGeometry } from '../animals/bodyParts/LimbGenerator.js';
-import { generateWingGeometry } from '../animals/bodyParts/WingGenerator.js';
-import { generateTailGeometry } from '../animals/bodyParts/TailGenerator.js';
-import { generateHeadGeometry } from '../animals/bodyParts/HeadGenerator.js';
-import { generateNoseGeometry } from '../animals/bodyParts/NoseGenerator.js';
-import { generateEarGeometry } from '../animals/bodyParts/EarGenerator.js';
+// canonical V2 bodyParts location so all pipelines go through the same files.
+import { generateTorsoGeometry } from '../bodyparts/v2/TorsoGenerator.js';
+import { generateLimbGeometry } from '../bodyparts/v2/LimbGenerator.js';
+import { generateMultiLimbGeometry } from '../bodyparts/v2/MultiLimbGenerator.js';
+import { generateWingGeometry } from '../bodyparts/v2/WingGenerator.js';
+import { generateTailGeometry } from '../bodyparts/v2/TailGenerator.js';
+import { generateHeadGeometry } from '../bodyparts/v2/HeadGenerator.js';
+import { generateNoseGeometry } from '../bodyparts/v2/NoseGenerator.js';
+import { generateEarGeometry } from '../bodyparts/v2/EarGenerator.js';
 
 // Import any known radius profile factories. These map human‑readable
 // names used in blueprints (e.g. "elephant_heavy") to functions
@@ -36,70 +38,13 @@ const V2_RADIUS_PROFILE_FACTORIES = {
 const GENERATORS = {
   torsoGenerator: generateTorsoGeometry,
   limbGenerator: generateLimbGeometry,
+  multiLimbGenerator: generateMultiLimbGeometry,
   wingGenerator: generateWingGeometry,
   tailGenerator: generateTailGeometry,
   headGenerator: generateHeadGeometry,
   noseGenerator: generateNoseGeometry,
   earGenerator: generateEarGeometry,
 };
-
-function normalizeChains(blueprint) {
-  const anatomy = blueprint?.anatomy || {};
-  const chainDefs = Array.isArray(anatomy.chains) ? anatomy.chains : blueprint?.chainsV2;
-
-  if (!Array.isArray(chainDefs)) {
-    return [];
-  }
-
-  return chainDefs
-    .map((def) => {
-      if (!def || typeof def.name !== 'string') {
-        return null;
-      }
-      const bones = Array.isArray(def.boneNames) ? def.boneNames : def.bones;
-      if (!Array.isArray(bones) || bones.length === 0) {
-        return null;
-      }
-      const radii = Array.isArray(def.radii) ? [...def.radii] : undefined;
-      return {
-        name: def.name,
-        bones,
-        radii,
-        profile: def.profile,
-        extendTo: def.extendTo,
-      };
-    })
-    .filter(Boolean);
-}
-
-function normalizeBodyParts(blueprint) {
-  const anatomy = blueprint?.anatomy || {};
-  const parts = [];
-
-  if (Array.isArray(anatomy.bodyParts)) {
-    parts.push(...anatomy.bodyParts);
-  }
-
-  if (anatomy.generators && typeof anatomy.generators === 'object') {
-    for (const [chainName, entry] of Object.entries(anatomy.generators)) {
-      if (!entry) continue;
-      const generatorKey = entry.generator || entry.type;
-      if (!generatorKey) continue;
-      parts.push({
-        name: entry.name || chainName,
-        chain: chainName,
-        generator: generatorKey,
-        options: entry.options,
-      });
-    }
-  }
-
-  if (Array.isArray(blueprint?.bodyPartsV2)) {
-    parts.push(...blueprint.bodyPartsV2);
-  }
-
-  return parts;
-}
 
 function buildMaterialFromDefinition(definition, { fallbackColor = 0x777777 } = {}) {
   const safe = definition || {};
@@ -178,14 +123,15 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
     return index;
   };
 
+  const { chains, bodyParts } = validateAnatomyV2(blueprint, {
+    generatorKeys: Object.keys(GENERATORS),
+  });
+
   // Index chain definitions by name for quick lookup.
   const chainDefs = {};
-  const normalizedChains = normalizeChains(blueprint);
-  for (const cd of normalizedChains) {
+  for (const cd of chains) {
     chainDefs[cd.name] = cd;
   }
-
-  const bodyParts = normalizeBodyParts(blueprint);
   // Determine if we are isolating a part for debug.
   const isolateName = typeof options.isolatePart === 'string' && options.isolatePart.length > 0 ? options.isolatePart : null;
 
@@ -226,6 +172,27 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
     if (opts.extendRumpToRearLegs === undefined && chainDef.extendTo !== undefined) {
       opts.extendRumpToRearLegs = chainDef.extendTo;
     }
+
+    const resolvedAdditionalChains = Array.isArray(opts.additionalChains)
+      ? opts.additionalChains
+          .map((entry) => {
+            if (typeof entry === 'string') return chainDefs[entry];
+            if (entry && typeof entry === 'object' && entry.name && chainDefs[entry.name]) {
+              return chainDefs[entry.name];
+            }
+            return entry;
+          })
+          .filter(Boolean)
+      : [];
+    if (resolvedAdditionalChains.length > 0) {
+      opts.additionalChains = resolvedAdditionalChains.map((c) => ({
+        name: c.name,
+        boneNames: [...(Array.isArray(c.bones) ? c.bones : [])],
+        radii: Array.isArray(c.radii) ? [...c.radii] : undefined,
+        profile: c.profile,
+        extendTo: c.extendTo,
+      }));
+    }
     // Interpret radiusProfile strings: map to registered factory functions.
     const radiusProfileName = opts.radiusProfile || chainDef.profile;
     if (typeof radiusProfileName === 'string') {
@@ -247,12 +214,14 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       console.error('[buildCreatureFromBlueprintV2] Error generating part', part.name, err);
       continue;
     }
-    if (!result || !result.geometry || !(result.geometry instanceof THREE.BufferGeometry)) {
+
+    const geometryResult = result instanceof THREE.BufferGeometry ? result : result?.geometry;
+    if (!geometryResult || !(geometryResult instanceof THREE.BufferGeometry)) {
       console.warn('[buildCreatureFromBlueprintV2] Generator did not return geometry for', part.name);
       continue;
     }
 
-    let geometry = result.geometry;
+    let geometry = geometryResult;
 
     // If the generator returned an empty BufferGeometry (no index and no
     // position attribute), merging will fail with
@@ -272,10 +241,12 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       continue;
     }
 
+    const meta = result && !(result instanceof THREE.BufferGeometry) ? result.meta : undefined;
+
     // Apply any meta transform (e.g. ear fan/flatten) to the geometry.
-    if (result.meta && result.meta.transform instanceof THREE.Matrix4) {
+    if (meta && meta.transform instanceof THREE.Matrix4) {
       geometry = geometry.clone();
-      geometry.applyMatrix4(result.meta.transform);
+      geometry.applyMatrix4(meta.transform);
     }
 
     const defaultBoneIndex = bones.findIndex((b) => b && b.name === chainBoneNames[0]);
@@ -286,8 +257,7 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       ? geometry.toNonIndexed()
       : ensureSkinAttributes(geometry, { defaultBoneIndex: Math.max(0, defaultBoneIndex), makeNonIndexed: true });
 
-    const materialKey =
-      (result.meta && result.meta.materialKey) || opts.materialKey || part.materialKey || 'surface';
+    const materialKey = (meta && meta.materialKey) || opts.materialKey || part.materialKey || 'surface';
     const materialIndex = resolveMaterialIndex(materialKey);
 
     const drawCount = preparedGeometry.getIndex()

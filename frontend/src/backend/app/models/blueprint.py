@@ -7,7 +7,7 @@ types in frontend/src/types/SpeciesBlueprint.ts.
 
 from typing import Dict, List, Optional, Any, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class BlueprintMeta(BaseModel):
@@ -347,3 +347,41 @@ class SpeciesBlueprint(BaseModel):
     )
     materials: MaterialsConfig
     behaviorPresets: BehaviorPresets
+
+    @model_validator(mode="after")
+    def validate_chains_and_bodyparts(self):
+        """Ensure chains/bodyParts mappings are coherent for anatomy V2."""
+
+        chain_names = {c.name for c in self.chainsV2}
+        if self.bodyPartsV2 and not chain_names:
+            raise ValueError("chainsV2 must be provided when bodyPartsV2 are defined")
+
+        # Validate that chain bones exist in the skeleton
+        skeleton_bones = {b.name for b in self.skeleton.bones}
+        for chain in self.chainsV2:
+            missing_bones = [bone for bone in chain.bones if bone not in skeleton_bones]
+            if missing_bones:
+                raise ValueError(
+                    f"Chain '{chain.name}' references missing bones: {', '.join(missing_bones)}"
+                )
+
+        # Validate body part -> chain mapping
+        for part in self.bodyPartsV2:
+            if part.chain not in chain_names:
+                raise ValueError(
+                    f"Body part '{part.name}' targets unknown chain '{part.chain}'. "
+                    f"Known chains: {', '.join(sorted(chain_names)) or 'none'}"
+                )
+            options = getattr(part, "options", {}) or {}
+            if isinstance(options, dict):
+                additional = options.get("additionalChains") or []
+                missing_additional = [name for name in additional if name not in chain_names]
+                if missing_additional:
+                    raise ValueError(
+                        "Body part '"
+                        + part.name
+                        + "' references unknown additionalChains: "
+                        + ", ".join(missing_additional)
+                    )
+
+        return self

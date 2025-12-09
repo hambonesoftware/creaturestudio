@@ -33,7 +33,45 @@ async function loadBlueprint(name) {
   return JSON.parse(raw);
 }
 
-async function buildAndCheck(name) {
+async function loadExpectedMetrics() {
+  const fixturePath = resolve(__dirname, './fixtures/runtime_v2_expected.json');
+  const raw = await fs.readFile(fixturePath, 'utf8');
+  return JSON.parse(raw);
+}
+
+function geometryMetrics(mesh) {
+  const geometry = mesh.geometry;
+  geometry.computeBoundingBox();
+  const posAttr = geometry.getAttribute('position');
+  return {
+    vertexCount: posAttr?.count ?? 0,
+    boneCount: mesh.skeleton?.bones?.length ?? 0,
+    bbox: {
+      min: geometry.boundingBox?.min.toArray() ?? [0, 0, 0],
+      max: geometry.boundingBox?.max.toArray() ?? [0, 0, 0],
+    },
+  };
+}
+
+function assertClose(actual, expected, tolerance, label) {
+  const delta = Math.abs(actual - expected);
+  assert.ok(delta <= tolerance, `${label} expected ${expected} +/- ${tolerance}, got ${actual}`);
+}
+
+function compareMetrics(name, actual, expected) {
+  assert.ok(expected, `${name}: missing expected metrics fixture`);
+  assert.ok(actual.vertexCount > 0, `${name}: geometry should have vertices`);
+  assert.strictEqual(actual.vertexCount, expected.vertexCount, `${name}: vertexCount mismatch`);
+  assert.strictEqual(actual.boneCount, expected.boneCount, `${name}: boneCount mismatch`);
+
+  const tolerance = expected.tolerance ?? 1e-3;
+  for (let i = 0; i < 3; i += 1) {
+    assertClose(actual.bbox.min[i], expected.bbox.min[i], tolerance, `${name}: bbox.min[${i}]`);
+    assertClose(actual.bbox.max[i], expected.bbox.max[i], tolerance, `${name}: bbox.max[${i}]`);
+  }
+}
+
+async function buildAndCheck(name, expectedMetrics) {
   const blueprint = await loadBlueprint(name);
   assert.ok(Array.isArray(blueprint.chainsV2), `${name} should define chainsV2`);
   assert.ok(Array.isArray(blueprint.bodyPartsV2), `${name} should define bodyPartsV2`);
@@ -45,18 +83,19 @@ async function buildAndCheck(name) {
   assert.ok(mesh && mesh.isSkinnedMesh, `${name}: mesh should be a THREE.SkinnedMesh`);
   assert.ok(skeleton instanceof THREE.Skeleton, `${name}: skeleton should be a THREE.Skeleton`);
   assert.ok(Array.isArray(bones) && bones.length > 0, `${name}: bones array should be non-empty`);
-  // Ensure geometry has at least one vertex
-  const posAttr = mesh.geometry.getAttribute('position');
-  assert.ok(posAttr && posAttr.count > 0, `${name}: geometry should have vertices`);
-  console.log(`${name}: V2 runtime smoke test passed. Vertex count = ${posAttr.count}`);
+
+  const metrics = geometryMetrics(mesh);
+  compareMetrics(name, metrics, expectedMetrics[name]);
+  console.log(`${name}: V2 runtime snapshot matched. Vertex count = ${metrics.vertexCount}`);
 }
 
 async function main() {
+  const expectedMetrics = await loadExpectedMetrics();
   const blueprints = ['ElephantBlueprint', 'TemplateQuadruped', 'TemplateWinged'];
   for (const bpName of blueprints) {
-    await buildAndCheck(bpName);
+    await buildAndCheck(bpName, expectedMetrics);
   }
-  console.log('All V2 blueprint smoke tests passed.');
+  console.log('All V2 blueprint snapshot tests passed.');
 }
 
 main().catch((err) => {
