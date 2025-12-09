@@ -11,6 +11,13 @@ export interface BlueprintMeta {
   author?: string;
   source?: string;
   notes?: string;
+  /**
+   * Temporary escape hatch: when true, the runtime will force the legacy
+   * body-parts pipeline even if chainsV2/bodyPartsV2 are present. This is
+   * useful for species that have not yet been migrated to the anatomy V2
+   * generators.
+   */
+  forceLegacyBuild?: boolean;
 }
 
 export type BodyPlanType = "quadruped" | "biped" | "winged" | "nopeds";

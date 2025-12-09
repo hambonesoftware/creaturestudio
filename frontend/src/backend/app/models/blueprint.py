@@ -25,6 +25,13 @@ class BlueprintMeta(BaseModel):
     author: Optional[str] = None
     source: Optional[str] = None
     notes: Optional[str] = None
+    forceLegacyBuild: bool = Field(
+        default=False,
+        description=(
+            "Temporary escape hatch to force legacy body-part builders when"
+            " anatomy V2 data is incomplete."
+        ),
+    )
 
 
 class BodyPlan(BaseModel):

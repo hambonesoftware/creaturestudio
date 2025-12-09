@@ -85,6 +85,11 @@
         "notes": {
           "type": "string",
           "description": "Free-form notes about this blueprint."
+        },
+        "forceLegacyBuild": {
+          "type": "boolean",
+          "description": "Force the legacy body-part pipeline even when V2 anatomy data is present.",
+          "default": false
         }
       }
     },

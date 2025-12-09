@@ -20,12 +20,18 @@ import { buildElephantFromBodyParts } from "./buildElephantFromBodyParts.js";
 export function createCreatureFromBlueprint(blueprint, options = {}) {
   const speciesName = blueprint?.meta?.name || blueprint?.meta?.speciesName || "";
   const isElephant = speciesName.toLowerCase() === "elephant";
+  const forceLegacy = blueprint?.meta?.forceLegacyBuild === true;
 
   if (isElephant) {
     return buildElephantFromBodyParts(blueprint, options);
   }
   // If the blueprint defines the new V2 anatomy fields, use the V2 builder.
-  if (blueprint && Array.isArray(blueprint.chainsV2) && Array.isArray(blueprint.bodyPartsV2)) {
+  if (
+    blueprint &&
+    !forceLegacy &&
+    Array.isArray(blueprint.chainsV2) &&
+    Array.isArray(blueprint.bodyPartsV2)
+  ) {
     return buildCreatureFromBlueprintV2(blueprint, options);
   }
   // Otherwise fall back to the legacy builder.

@@ -1,550 +1,203 @@
 {
   "meta": {
     "name": "TemplateWinged",
-    "version": "4.0.0",
-    "author": "Zoo Canonical",
-    "source": "ElephantCanonicalQuadruped",
-    "notes": "Canonical quadruped reference used for CreatureStudio Phase 1.",
-    "description": "Generic winged template with quadruped proportions. Tag as winged when adding wings in the editor.",
-    "tags": [
-      "template"
-    ]
+    "version": "0.1.0",
+    "author": "CreatureStudio",
+    "schemaVersion": "4.2.0",
+    "notes": "Lightweight winged creature template for birds or dragons."
   },
   "bodyPlan": {
-    "type": "winged_quadruped",
+    "type": "winged",
     "hasTail": true,
-    "hasTrunk": true,
-    "hasWings": false,
+    "hasTrunk": false,
+    "hasWings": true,
     "hasEars": true,
-    "symmetryMode": "bilateral",
-    "notes": "Large quadruped with trunk-based nose chain and large ears."
+    "symmetryMode": "bilateral"
   },
   "skeleton": {
     "root": "spine_base",
-    "coordinateSystem": "Y-up, Z-forward, X-right (see rulebook chapter 2).",
+    "coordinateSystem": "Y-up, Z-forward, X-right",
     "bones": [
-      {
-        "name": "spine_base",
-        "parent": "root",
-        "position": [
-          0.0,
-          1.8,
-          0.0
-        ]
-      },
-      {
-        "name": "spine_mid",
-        "parent": "spine_base",
-        "position": [
-          0.0,
-          1.8,
-          1.0
-        ]
-      },
-      {
-        "name": "spine_neck",
-        "parent": "spine_mid",
-        "position": [
-          0.0,
-          1.9,
-          1.8
-        ]
-      },
-      {
-        "name": "spine_head",
-        "parent": "spine_neck",
-        "position": [
-          0.0,
-          2.0,
-          2.4
-        ]
-      },
-      {
-        "name": "head",
-        "parent": "spine_head",
-        "position": [
-          0.0,
-          2.0,
-          2.9
-        ]
-      },
-      {
-        "name": "trunk_root",
-        "parent": "head",
-        "position": [
-          0.0,
-          1.95,
-          3.1
-        ]
-      },
-      {
-        "name": "trunk_base",
-        "parent": "trunk_root",
-        "position": [
-          0.0,
-          1.9,
-          3.4
-        ]
-      },
-      {
-        "name": "trunk_mid1",
-        "parent": "trunk_base",
-        "position": [
-          0.0,
-          1.8,
-          3.7
-        ]
-      },
-      {
-        "name": "trunk_mid2",
-        "parent": "trunk_mid1",
-        "position": [
-          0.0,
-          1.7,
-          3.9
-        ]
-      },
-      {
-        "name": "trunk_tip",
-        "parent": "trunk_mid2",
-        "position": [
-          0.0,
-          1.6,
-          4.1
-        ]
-      },
-      {
-        "name": "tail_base",
-        "parent": "spine_base",
-        "position": [
-          0.0,
-          1.7,
-          -0.4
-        ]
-      },
-      {
-        "name": "tail_mid",
-        "parent": "tail_base",
-        "position": [
-          0.0,
-          1.6,
-          -0.7
-        ]
-      },
-      {
-        "name": "tail_tip",
-        "parent": "tail_mid",
-        "position": [
-          0.0,
-          1.5,
-          -1.0
-        ]
-      },
-      {
-        "name": "ear_left",
-        "parent": "head",
-        "position": [
-          -0.5,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "ear_left_tip",
-        "parent": "ear_left",
-        "position": [
-          -0.9,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "ear_right",
-        "parent": "head",
-        "position": [
-          0.5,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "ear_right_tip",
-        "parent": "ear_right",
-        "position": [
-          0.9,
-          2.0,
-          2.7
-        ]
-      },
-      {
-        "name": "front_leg_l_shoulder",
-        "parent": "spine_mid",
-        "position": [
-          -0.6,
-          1.7,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_l_knee",
-        "parent": "front_leg_l_shoulder",
-        "position": [
-          -0.6,
-          1.0,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_l_ankle",
-        "parent": "front_leg_l_knee",
-        "position": [
-          -0.6,
-          0.5,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_l_foot",
-        "parent": "front_leg_l_ankle",
-        "position": [
-          -0.6,
-          0.0,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_shoulder",
-        "parent": "spine_mid",
-        "position": [
-          0.6,
-          1.7,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_knee",
-        "parent": "front_leg_r_shoulder",
-        "position": [
-          0.6,
-          1.0,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_ankle",
-        "parent": "front_leg_r_knee",
-        "position": [
-          0.6,
-          0.5,
-          1.0
-        ]
-      },
-      {
-        "name": "front_leg_r_foot",
-        "parent": "front_leg_r_ankle",
-        "position": [
-          0.6,
-          0.0,
-          1.0
-        ]
-      },
-      {
-        "name": "back_leg_l_hip",
-        "parent": "spine_base",
-        "position": [
-          -0.6,
-          1.7,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_l_knee",
-        "parent": "back_leg_l_hip",
-        "position": [
-          -0.6,
-          1.0,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_l_ankle",
-        "parent": "back_leg_l_knee",
-        "position": [
-          -0.6,
-          0.5,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_l_foot",
-        "parent": "back_leg_l_ankle",
-        "position": [
-          -0.6,
-          0.0,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_hip",
-        "parent": "spine_base",
-        "position": [
-          0.6,
-          1.7,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_knee",
-        "parent": "back_leg_r_hip",
-        "position": [
-          0.6,
-          1.0,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_ankle",
-        "parent": "back_leg_r_knee",
-        "position": [
-          0.6,
-          0.5,
-          -0.2
-        ]
-      },
-      {
-        "name": "back_leg_r_foot",
-        "parent": "back_leg_r_ankle",
-        "position": [
-          0.6,
-          0.0,
-          -0.2
-        ]
-      }
+      { "name": "spine_base", "parent": "root", "position": [0.0, 0.9, 0.0] },
+      { "name": "spine_mid", "parent": "spine_base", "position": [0.0, 0.1, 0.7] },
+      { "name": "spine_neck", "parent": "spine_mid", "position": [0.0, 0.15, 0.5] },
+      { "name": "spine_head", "parent": "spine_neck", "position": [0.0, 0.1, 0.25] },
+      { "name": "head", "parent": "spine_head", "position": [0.0, 0.0, 0.25] },
+      { "name": "spine_tail", "parent": "spine_base", "position": [0.0, -0.1, -0.45] },
+      { "name": "tail_base", "parent": "spine_tail", "position": [0.0, -0.15, -0.3] },
+      { "name": "tail_tip", "parent": "tail_base", "position": [0.0, -0.25, -0.25] },
+      { "name": "ear_left", "parent": "head", "position": [0.14, 0.05, -0.15] },
+      { "name": "ear_left_tip", "parent": "ear_left", "position": [0.14, -0.15, -0.1] },
+      { "name": "ear_right", "parent": "head", "position": [-0.14, 0.05, -0.15] },
+      { "name": "ear_right_tip", "parent": "ear_right", "position": [-0.14, -0.15, -0.1] },
+      { "name": "wing_left_base", "parent": "spine_mid", "position": [0.25, 0.05, 0.25] },
+      { "name": "wing_left_mid", "parent": "wing_left_base", "position": [0.45, -0.05, 0.2] },
+      { "name": "wing_left_tip", "parent": "wing_left_mid", "position": [0.6, -0.1, 0.05] },
+      { "name": "wing_right_base", "parent": "spine_mid", "position": [-0.25, 0.05, 0.25] },
+      { "name": "wing_right_mid", "parent": "wing_right_base", "position": [-0.45, -0.05, 0.2] },
+      { "name": "wing_right_tip", "parent": "wing_right_mid", "position": [-0.6, -0.1, 0.05] },
+      { "name": "back_left_pelvis", "parent": "spine_base", "position": [0.18, -0.05, 0.05] },
+      { "name": "back_left_upper", "parent": "back_left_pelvis", "position": [0.0, -0.45, 0.02] },
+      { "name": "back_left_lower", "parent": "back_left_upper", "position": [0.0, -0.45, -0.02] },
+      { "name": "back_left_foot", "parent": "back_left_lower", "position": [0.0, -0.2, 0.0] },
+      { "name": "back_right_pelvis", "parent": "spine_base", "position": [-0.18, -0.05, 0.05] },
+      { "name": "back_right_upper", "parent": "back_right_pelvis", "position": [0.0, -0.45, 0.02] },
+      { "name": "back_right_lower", "parent": "back_right_upper", "position": [0.0, -0.45, -0.02] },
+      { "name": "back_right_foot", "parent": "back_right_lower", "position": [0.0, -0.2, 0.0] }
     ]
   },
   "chains": {
-    "spine": [
-      "spine_base",
-      "spine_mid",
-      "spine_neck",
-      "spine_head",
-      "head"
-    ],
-    "neck": [
-      "spine_neck",
-      "spine_head",
-      "head"
-    ],
-    "head": [
-      "head"
-    ],
-    "trunk": [
-      "trunk_root",
-      "trunk_base",
-      "trunk_mid1",
-      "trunk_mid2",
-      "trunk_tip"
-    ],
-    "tail": [
-      "tail_base",
-      "tail_mid",
-      "tail_tip"
-    ],
-    "earLeft": [
-      "ear_left",
-      "ear_left_tip"
-    ],
-    "earRight": [
-      "ear_right",
-      "ear_right_tip"
-    ],
-    "frontLegL": [
-      "front_leg_l_shoulder",
-      "front_leg_l_knee",
-      "front_leg_l_ankle",
-      "front_leg_l_foot"
-    ],
-    "frontLegR": [
-      "front_leg_r_shoulder",
-      "front_leg_r_knee",
-      "front_leg_r_ankle",
-      "front_leg_r_foot"
-    ],
-    "backLegL": [
-      "back_leg_l_hip",
-      "back_leg_l_knee",
-      "back_leg_l_ankle",
-      "back_leg_l_foot"
-    ],
-    "backLegR": [
-      "back_leg_r_hip",
-      "back_leg_r_knee",
-      "back_leg_r_ankle",
-      "back_leg_r_foot"
-    ]
+    "spine": ["spine_base", "spine_mid", "spine_neck"],
+    "neck": ["spine_neck", "spine_head"],
+    "head": ["head"],
+    "tail": ["spine_tail", "tail_base", "tail_tip"],
+    "earLeft": ["ear_left", "ear_left_tip"],
+    "earRight": ["ear_right", "ear_right_tip"],
+    "backLegL": ["back_left_pelvis", "back_left_upper", "back_left_lower", "back_left_foot"],
+    "backLegR": ["back_right_pelvis", "back_right_upper", "back_right_lower", "back_right_foot"],
+    "extraChains": {
+      "wingLeft": ["wing_left_base", "wing_left_mid", "wing_left_tip"],
+      "wingRight": ["wing_right_base", "wing_right_mid", "wing_right_tip"]
+    }
   },
   "sizes": {
-    "defaultRadius": 0.25,
-    "byChain": {
-      "spine": {
-        "radius": 0.35
-      },
-      "neck": {
-        "radius": 0.3
-      },
-      "head": {
-        "radius": 0.28
-      },
-      "trunk": {
-        "radius": 0.18
-      },
-      "tail": {
-        "radius": 0.08
-      },
-      "earLeft": {
-        "radius": 0.05
-      },
-      "earRight": {
-        "radius": 0.05
-      },
-      "frontLegL": {
-        "radius": 0.2
-      },
-      "frontLegR": {
-        "radius": 0.2
-      },
-      "backLegL": {
-        "radius": 0.22
-      },
-      "backLegR": {
-        "radius": 0.22
-      }
-    },
-    "byBone": {}
+    "defaultRadius": 0.18
   },
   "bodyParts": {
     "torso": {
       "generator": "torso",
       "chain": "spine",
-      "options": {
-        "sides": 12,
-        "capRounding": 0.5
-      }
+      "options": { "radii": [0.24, 0.28, 0.2], "sides": 16 }
     },
     "neck": {
       "generator": "neck",
       "chain": "neck",
-      "options": {
-        "sides": 10
-      }
+      "options": { "radii": [0.18, 0.12], "sides": 12 }
     },
     "head": {
       "generator": "head",
       "chain": "head",
-      "options": {}
-    },
-    "trunk": {
-      "generator": "trunk",
-      "chain": "trunk",
-      "options": {
-        "segments": 5
-      }
+      "options": { "radius": 0.2, "elongation": 0.9 }
     },
     "tail": {
       "generator": "tail",
       "chain": "tail",
-      "options": {
-        "segments": 3
-      }
+      "options": { "baseRadius": 0.08, "tipRadius": 0.04, "sides": 10 }
     },
     "earLeft": {
       "generator": "ear",
       "chain": "earLeft",
-      "options": {
-        "side": "left"
-      }
+      "options": { "radii": [0.12, 0.06], "flatten": 0.1, "tilt": 0.4, "sides": 10 }
     },
     "earRight": {
       "generator": "ear",
       "chain": "earRight",
-      "options": {
-        "side": "right"
-      }
-    },
-    "frontLegL": {
-      "generator": "limb",
-      "chain": "frontLegL",
-      "options": {
-        "side": "left",
-        "isFront": true
-      }
-    },
-    "frontLegR": {
-      "generator": "limb",
-      "chain": "frontLegR",
-      "options": {
-        "side": "right",
-        "isFront": true
-      }
+      "options": { "radii": [0.12, 0.06], "flatten": 0.1, "tilt": -0.4, "sides": 10 }
     },
     "backLegL": {
       "generator": "limb",
       "chain": "backLegL",
-      "options": {
-        "side": "left",
-        "isFront": false
-      }
+      "options": { "radii": [0.16, 0.14, 0.12, 0.1], "sides": 11 }
     },
     "backLegR": {
       "generator": "limb",
       "chain": "backLegR",
-      "options": {
-        "side": "right",
-        "isFront": false
+      "options": { "radii": [0.16, 0.14, 0.12, 0.1], "sides": 11 }
+    },
+    "extraParts": {
+      "wingLeft": {
+        "generator": "limb",
+        "chain": "wingLeft",
+        "options": { "radii": [0.16, 0.12, 0.08], "sides": 12, "capEnd": true }
+      },
+      "wingRight": {
+        "generator": "limb",
+        "chain": "wingRight",
+        "options": { "radii": [0.16, 0.12, 0.08], "sides": 12, "capEnd": true }
       }
     }
   },
-  "materials": {
-    "surface": {
-      "color": "#7a7a7a",
-      "roughness": 0.85,
-      "metallic": 0.0,
-      "specular": 0.25
+  "chainsV2": [
+    { "name": "spine", "bones": ["spine_base", "spine_mid", "spine_neck"], "radii": [0.24, 0.28, 0.2] },
+    { "name": "neck", "bones": ["spine_neck", "spine_head"], "radii": [0.18, 0.12] },
+    { "name": "head", "bones": ["head"], "radii": [0.2] },
+    { "name": "tail", "bones": ["spine_tail", "tail_base", "tail_tip"], "radii": [0.08, 0.06, 0.04] },
+    { "name": "earLeft", "bones": ["ear_left", "ear_left_tip"], "radii": [0.12, 0.06] },
+    { "name": "earRight", "bones": ["ear_right", "ear_right_tip"], "radii": [0.12, 0.06] },
+    { "name": "backLegL", "bones": ["back_left_pelvis", "back_left_upper", "back_left_lower", "back_left_foot"], "radii": [0.16, 0.14, 0.12, 0.1] },
+    { "name": "backLegR", "bones": ["back_right_pelvis", "back_right_upper", "back_right_lower", "back_right_foot"], "radii": [0.16, 0.14, 0.12, 0.1] },
+    { "name": "wingLeft", "bones": ["wing_left_base", "wing_left_mid", "wing_left_tip"], "radii": [0.16, 0.12, 0.08] },
+    { "name": "wingRight", "bones": ["wing_right_base", "wing_right_mid", "wing_right_tip"], "radii": [0.16, 0.12, 0.08] }
+  ],
+  "bodyPartsV2": [
+    {
+      "name": "spine",
+      "generator": "torsoGenerator",
+      "chain": "spine",
+      "options": { "radii": [0.24, 0.28, 0.2], "sides": 16 }
     },
-    "eye": {
-      "color": "#222222",
-      "roughness": 0.3,
-      "metallic": 0.0,
-      "specular": 0.8
+    {
+      "name": "neck",
+      "generator": "limbGenerator",
+      "chain": "neck",
+      "options": { "radii": [0.18, 0.12], "sides": 12 }
     },
-    "tusk": {
-      "color": "#f5f0e6",
-      "roughness": 0.4,
-      "metallic": 0.0,
-      "specular": 0.6
+    {
+      "name": "head",
+      "generator": "headGenerator",
+      "chain": "head",
+      "options": { "radius": 0.2, "detail": 0 }
     },
-    "nail": {
-      "color": "#d0c7b5",
-      "roughness": 0.6,
-      "metallic": 0.0,
-      "specular": 0.5
+    {
+      "name": "tail",
+      "generator": "tailGenerator",
+      "chain": "tail",
+      "options": { "baseRadius": 0.08, "tipRadius": 0.04, "sides": 10 }
+    },
+    {
+      "name": "earLeft",
+      "generator": "earGenerator",
+      "chain": "earLeft",
+      "options": { "radii": [0.12, 0.06], "sides": 10, "flattenScale": 0.1, "fanAngle": 0.4 }
+    },
+    {
+      "name": "earRight",
+      "generator": "earGenerator",
+      "chain": "earRight",
+      "options": { "radii": [0.12, 0.06], "sides": 10, "flattenScale": 0.1, "fanAngle": -0.4 }
+    },
+    {
+      "name": "backLegL",
+      "generator": "limbGenerator",
+      "chain": "backLegL",
+      "options": { "radii": [0.16, 0.14, 0.12, 0.1], "sides": 11 }
+    },
+    {
+      "name": "backLegR",
+      "generator": "limbGenerator",
+      "chain": "backLegR",
+      "options": { "radii": [0.16, 0.14, 0.12, 0.1], "sides": 11 }
+    },
+    {
+      "name": "wingLeft",
+      "generator": "wingGenerator",
+      "chain": "wingLeft",
+      "options": { "span": 0.6, "membraneResolution": 4 }
+    },
+    {
+      "name": "wingRight",
+      "generator": "wingGenerator",
+      "chain": "wingRight",
+      "options": { "span": 0.6, "membraneResolution": 4 }
     }
+  ],
+  "materials": {
+    "surface": { "color": "#d5d5e0", "roughness": 0.6, "metallic": 0.0, "specular": 0.25 },
+    "eye": { "color": "#202020", "roughness": 0.2, "specular": 0.8 }
   },
   "behaviorPresets": {
-    "gait": "elephant_default",
-    "idleBehaviors": [
-      "ear_fan",
-      "trunk_sway",
-      "weight_shift"
-    ],
-    "specialInteractions": [
-      "drink_from_pond",
-      "spray_water"
-    ],
-    "tags": [
-      "quadruped",
-      "reference",
-      "elephant"
-    ]
+    "gait": "none",
+    "idleBehaviors": ["idleLook"],
+    "tags": ["template", "winged"]
   }
 }
