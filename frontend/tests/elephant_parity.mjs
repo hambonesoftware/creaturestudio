@@ -14,7 +14,7 @@ import fs from "node:fs/promises";
 import * as THREE from "three";
 
 import { ElephantCreature } from "../../Elephant/ElephantCreature.js";
-import { buildCreatureFromBlueprint } from "../src/runtime/BlueprintCreatureRuntime.js";
+import { createCreatureFromBlueprint } from "../src/runtime/createCreatureFromBlueprint.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -77,7 +77,7 @@ async function main() {
   const zooElephant = new ElephantCreature({ lowPoly: false });
   zooElephant.updateMatrixWorld(true);
 
-  const csResult = buildCreatureFromBlueprint(blueprint, { lowPoly: false });
+  const csResult = createCreatureFromBlueprint(blueprint, { lowPoly: false, useAnatomyV2: true });
   if (!csResult.mesh) {
     throw new Error("Blueprint runtime did not return a mesh");
   }

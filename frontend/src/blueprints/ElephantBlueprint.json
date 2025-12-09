@@ -5,9 +5,8 @@
     "author": "Zoo Canonical",
     "source": "ElephantCanonicalQuadruped",
     "notes": "Canonical quadruped reference used for CreatureStudio Phase 1.",
-    "schemaVersion": "4.2.0",
-    "forceLegacyBuild": true
-  },
+  "schemaVersion": "4.2.0"
+},
   "bodyPlan": {
     "type": "quadruped",
     "hasTail": true,

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildSkeletonFromBlueprint } from './buildSkeletonFromBlueprint.js';
+import { ensureSkinAttributes } from '../anatomy/utils.js';
+import { createBehaviorControllerForBlueprint } from '../behavior/BehaviorRegistry.js';
 
 // Import the general anatomy generators implemented in Phase 3 from the
 // canonical bodyParts location so all pipelines go through the same files.
@@ -41,6 +43,95 @@ const GENERATORS = {
   earGenerator: generateEarGeometry,
 };
 
+function normalizeChains(blueprint) {
+  const anatomy = blueprint?.anatomy || {};
+  const chainDefs = Array.isArray(anatomy.chains) ? anatomy.chains : blueprint?.chainsV2;
+
+  if (!Array.isArray(chainDefs)) {
+    return [];
+  }
+
+  return chainDefs
+    .map((def) => {
+      if (!def || typeof def.name !== 'string') {
+        return null;
+      }
+      const bones = Array.isArray(def.boneNames) ? def.boneNames : def.bones;
+      if (!Array.isArray(bones) || bones.length === 0) {
+        return null;
+      }
+      const radii = Array.isArray(def.radii) ? [...def.radii] : undefined;
+      return {
+        name: def.name,
+        bones,
+        radii,
+        profile: def.profile,
+        extendTo: def.extendTo,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeBodyParts(blueprint) {
+  const anatomy = blueprint?.anatomy || {};
+  const parts = [];
+
+  if (Array.isArray(anatomy.bodyParts)) {
+    parts.push(...anatomy.bodyParts);
+  }
+
+  if (anatomy.generators && typeof anatomy.generators === 'object') {
+    for (const [chainName, entry] of Object.entries(anatomy.generators)) {
+      if (!entry) continue;
+      const generatorKey = entry.generator || entry.type;
+      if (!generatorKey) continue;
+      parts.push({
+        name: entry.name || chainName,
+        chain: chainName,
+        generator: generatorKey,
+        options: entry.options,
+      });
+    }
+  }
+
+  if (Array.isArray(blueprint?.bodyPartsV2)) {
+    parts.push(...blueprint.bodyPartsV2);
+  }
+
+  return parts;
+}
+
+function buildMaterialFromDefinition(definition, { fallbackColor = 0x777777 } = {}) {
+  const safe = definition || {};
+
+  let color = fallbackColor;
+  if (typeof safe.color === 'string') {
+    try {
+      color = new THREE.Color(safe.color).getHex();
+    } catch (_e) {
+      // ignore invalid color strings
+    }
+  }
+
+  let emissive = 0x000000;
+  if (typeof safe.emissive === 'string') {
+    try {
+      emissive = new THREE.Color(safe.emissive).getHex();
+    } catch (_e) {
+      // ignore invalid color strings
+    }
+  }
+
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    emissive,
+    roughness: typeof safe.roughness === 'number' ? safe.roughness : 0.68,
+    metalness: typeof safe.metallic === 'number' ? safe.metallic : 0.03,
+  });
+
+  return material;
+}
+
 /**
  * Build a creature from a blueprint using the anatomy V2 pipeline.
  *
@@ -62,20 +153,39 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
   const skeletonResult = buildSkeletonFromBlueprint(blueprint);
   const { skeleton, bones, bonesByName } = skeletonResult;
 
+  // Ensure world matrices are current so generators can sample bone positions.
+  skeletonResult.root.updateWorldMatrix(true, true);
+
   const geometries = [];
   const partGeometries = [];
 
+  const materialIndices = new Map();
+  const materials = [];
+
+  const resolveMaterialIndex = (key) => {
+    const safeKey = key || 'surface';
+    if (materialIndices.has(safeKey)) {
+      return materialIndices.get(safeKey);
+    }
+
+    const palette = blueprint.materials || {};
+    const materialDef = palette[safeKey] || palette.surface || {};
+    const material = buildMaterialFromDefinition(materialDef);
+    material.name = `material_${safeKey}`;
+    const index = materials.length;
+    materials.push(material);
+    materialIndices.set(safeKey, index);
+    return index;
+  };
+
   // Index chain definitions by name for quick lookup.
   const chainDefs = {};
-  if (Array.isArray(blueprint.chainsV2)) {
-    for (const cd of blueprint.chainsV2) {
-      if (cd && typeof cd.name === 'string') {
-        chainDefs[cd.name] = cd;
-      }
-    }
+  const normalizedChains = normalizeChains(blueprint);
+  for (const cd of normalizedChains) {
+    chainDefs[cd.name] = cd;
   }
 
-  const bodyParts = Array.isArray(blueprint.bodyPartsV2) ? blueprint.bodyPartsV2 : [];
+  const bodyParts = normalizeBodyParts(blueprint);
   // Determine if we are isolating a part for debug.
   const isolateName = typeof options.isolatePart === 'string' && options.isolatePart.length > 0 ? options.isolatePart : null;
 
@@ -95,24 +205,37 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       console.warn('[buildCreatureFromBlueprintV2] Missing chain definition for', chainName);
       continue;
     }
+    const chainBoneNames = Array.isArray(chainDef.bones) ? chainDef.bones : [];
     // Construct an AnatomyChain-like object expected by generators.
     const anatomyChain = {
       name: chainDef.name,
-      boneNames: [...chainDef.bones],
+      boneNames: [...chainBoneNames],
       radii: Array.isArray(chainDef.radii) ? [...chainDef.radii] : undefined,
       profile: undefined,
+      extendTo: chainDef.extendTo,
     };
     // Prepare options; clone to avoid mutating blueprint data.
     const opts = part.options ? { ...part.options } : {};
+    opts.runtimeOptions = { ...options };
+    if (!opts.bones) {
+      opts.bones = [...chainBoneNames];
+    }
+    if (opts.radii === undefined && Array.isArray(chainDef.radii)) {
+      opts.radii = [...chainDef.radii];
+    }
+    if (opts.extendRumpToRearLegs === undefined && chainDef.extendTo !== undefined) {
+      opts.extendRumpToRearLegs = chainDef.extendTo;
+    }
     // Interpret radiusProfile strings: map to registered factory functions.
-    if (typeof opts.radiusProfile === 'string') {
-      const name = opts.radiusProfile;
-      const factory = V2_RADIUS_PROFILE_FACTORIES[name];
+    const radiusProfileName = opts.radiusProfile || chainDef.profile;
+    if (typeof radiusProfileName === 'string') {
+      const factory = V2_RADIUS_PROFILE_FACTORIES[radiusProfileName];
       if (typeof factory === 'function') {
         try {
           opts.radiusProfile = factory();
+          anatomyChain.profile = opts.radiusProfile;
         } catch (err) {
-          console.warn('[buildCreatureFromBlueprintV2] Failed to instantiate radius profile', name, err);
+          console.warn('[buildCreatureFromBlueprintV2] Failed to instantiate radius profile', radiusProfileName, err);
         }
       }
     }
@@ -155,42 +278,54 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       geometry.applyMatrix4(result.meta.transform);
     }
 
-    geometries.push(geometry);
-    partGeometries.push({ name: part.name, chain: chainName, generator: genName, geometry });
+    const defaultBoneIndex = bones.findIndex((b) => b && b.name === chainBoneNames[0]);
+    const hasSkinAttributes =
+      !!geometry.getAttribute('skinIndex') && !!geometry.getAttribute('skinWeight');
+
+    const preparedGeometry = hasSkinAttributes
+      ? geometry.toNonIndexed()
+      : ensureSkinAttributes(geometry, { defaultBoneIndex: Math.max(0, defaultBoneIndex), makeNonIndexed: true });
+
+    const materialKey =
+      (result.meta && result.meta.materialKey) || opts.materialKey || part.materialKey || 'surface';
+    const materialIndex = resolveMaterialIndex(materialKey);
+
+    const drawCount = preparedGeometry.getIndex()
+      ? preparedGeometry.getIndex().count
+      : preparedGeometry.getAttribute('position').count;
+    preparedGeometry.clearGroups();
+    preparedGeometry.addGroup(0, drawCount, materialIndex);
+
+    geometries.push(preparedGeometry);
+    partGeometries.push({
+      name: part.name,
+      chain: chainName,
+      generator: genName,
+      materialKey,
+      geometry: preparedGeometry,
+    });
   }
 
-  // If no geometry was generated, fall back to a sphere so something appears.
+  // If no geometry was generated, fall back to a skinned sphere so something appears.
   if (geometries.length === 0) {
-    const fallback = new THREE.SphereGeometry(0.45, 14, 12);
+    const defaultMaterialIndex = resolveMaterialIndex('surface');
+    const fallback = ensureSkinAttributes(new THREE.SphereGeometry(0.45, 14, 12), {
+      defaultBoneIndex: 0,
+      makeNonIndexed: true,
+    });
+    const drawCount = fallback.getAttribute('position')?.count || 0;
+    fallback.clearGroups();
+    fallback.addGroup(0, drawCount, defaultMaterialIndex);
     geometries.push(fallback);
   }
 
-  // Merge all geometries into one. Convert to non-indexed to allow merging with skin attributes.
-  const mergedGeometry = mergeGeometries(
-    geometries.map((g) => g.toNonIndexed()),
-    true
-  );
+  // Merge all geometries into one, preserving groups for multi-material support.
+  const mergedGeometry = mergeGeometries(geometries, true);
   if (!mergedGeometry) {
     throw new Error('[buildCreatureFromBlueprintV2] Failed to merge geometries');
   }
   mergedGeometry.computeBoundingSphere();
   mergedGeometry.computeBoundingBox();
-
-  // Create a simple material. If blueprint defines surface material, use its color.
-  // We do not set the `skinning` property in the constructor because
-  // MeshStandardMaterial's constructor does not accept a `skinning` option in
-  // some Three.js versions. Instead we assign `material.skinning = true` after
-  // instantiation when appropriate.
-  let color = 0x777777;
-  const surface = blueprint.materials && blueprint.materials.surface;
-  if (surface && typeof surface.color === 'string') {
-    try {
-      color = new THREE.Color(surface.color).getHex();
-    } catch (_e) {
-      // ignore invalid color strings
-    }
-  }
-  const material = new THREE.MeshStandardMaterial({ color });
 
   // Determine if the merged geometry has skin attributes.  If it does, we
   // create a SkinnedMesh and enable skinning on the material.  Otherwise, we
@@ -199,9 +334,14 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
   // applying bone transforms, so we avoid binding in that case.
   const hasSkin = !!mergedGeometry.getAttribute('skinIndex') && !!mergedGeometry.getAttribute('skinWeight');
 
+  const materialList = materials.length > 0 ? materials : [buildMaterialFromDefinition(blueprint.materials?.surface)];
+  materialList.forEach((mat) => {
+    mat.skinning = hasSkin;
+  });
+  const material = materialList.length === 1 ? materialList[0] : materialList;
+
   let mesh;
   if (hasSkin) {
-    material.skinning = true;
     mesh = new THREE.SkinnedMesh(mergedGeometry, material);
     // Attach the skeleton root group to the mesh so the bones influence the geometry.
     mesh.add(skeletonResult.root);
@@ -223,6 +363,9 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
   // when the mesh isn't skinned.
   root.add(skeletonResult.root);
 
+  const controller = createBehaviorControllerForBlueprint(blueprint, skeleton, mesh, options);
+  const update = controller && typeof controller.update === 'function' ? controller.update.bind(controller) : null;
+
   return {
     root,
     mesh,
@@ -233,6 +376,9 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
     skeletonRootGroup: skeletonResult.root,
     mergedGeometry,
     partGeometries,
+    materials: materialList,
     meta: {},
+    controller,
+    update,
   };
 }
