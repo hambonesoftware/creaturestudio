@@ -2,19 +2,15 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildSkeletonFromBlueprint } from './buildSkeletonFromBlueprint.js';
 
-// Import the general anatomy generators implemented in Phase 3.
-// These functions build meshes for each body part using the V2 anatomy
-// abstractions. See `frontend/src/anatomy/generators` for details.
-// Import TypeScript modules directly; Vite handles `.ts` extensions.  Using
-// `.js` here would cause rollup to fail because no compiled JS files
-// exist in the generators directory.
-import { generateTorsoGeometry } from '../anatomy/generators/torsoGenerator.ts';
-import { generateLimbGeometry } from '../anatomy/generators/limbGenerator.ts';
-import { generateWingGeometry } from '../anatomy/generators/wingGenerator.ts';
-import { generateTailGeometry } from '../anatomy/generators/tailGenerator.ts';
-import { generateHeadGeometry } from '../anatomy/generators/headGenerator.ts';
-import { generateNoseGeometry } from '../anatomy/generators/noseGenerator.ts';
-import { generateEarGeometry } from '../anatomy/generators/earGenerator.ts';
+// Import the general anatomy generators implemented in Phase 3 from the
+// canonical bodyParts location so all pipelines go through the same files.
+import { generateTorsoGeometry } from '../animals/bodyParts/TorsoGenerator.js';
+import { generateLimbGeometry } from '../animals/bodyParts/LimbGenerator.js';
+import { generateWingGeometry } from '../animals/bodyParts/WingGenerator.js';
+import { generateTailGeometry } from '../animals/bodyParts/TailGenerator.js';
+import { generateHeadGeometry } from '../animals/bodyParts/HeadGenerator.js';
+import { generateNoseGeometry } from '../animals/bodyParts/NoseGenerator.js';
+import { generateEarGeometry } from '../animals/bodyParts/EarGenerator.js';
 
 // Import any known radius profile factories. These map human‑readable
 // names used in blueprints (e.g. "elephant_heavy") to functions
