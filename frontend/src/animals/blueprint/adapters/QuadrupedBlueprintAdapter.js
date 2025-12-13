@@ -113,15 +113,22 @@ export class QuadrupedBlueprintAdapter {
       }
       const bones = [];
       const seen = new Set();
-      for (const boneName of Array.isArray(chain.bones) ? chain.bones : []) {
+      const boneList = Array.isArray(chain.bones) ? chain.bones : chain.boneNames;
+      for (const boneName of Array.isArray(boneList) ? boneList : []) {
         if (seen.has(boneName)) continue;
         if (!skeletonBoneNames.has(boneName)) {
-          validation.warnings.push(`Chain ${name} references missing bone ${boneName}`);
+          validation.errors.push(`Chain ${name} references missing bone ${boneName}`);
           continue;
         }
         seen.add(boneName);
         bones.push(boneName);
       }
+
+      if (bones.length === 0) {
+        validation.errors.push(`Chain ${name} must include at least one bone`);
+        continue;
+      }
+
       byName.set(name, { name, bones, profile: chain.profile, extendTo: chain.extendTo, radii: chain.radii });
     }
 
@@ -158,10 +165,14 @@ export class QuadrupedBlueprintAdapter {
         validation.errors.push(`Body part ${name} references unknown chain ${part.chain}`);
         continue;
       }
+      if (!part.generator) {
+        validation.errors.push(`Body part ${name} is missing a generator key`);
+        continue;
+      }
       seen.add(name);
       parts.push({
         name,
-        generator: part.generator || "",
+        generator: part.generator,
         chain: part.chain,
         options: deepClone(part.options || {}),
       });

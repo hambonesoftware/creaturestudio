@@ -1,33 +1,39 @@
 import * as THREE from "three";
+import WebGPURenderer from "three/src/renderers/webgpu/WebGPURenderer.js";
 
 export function isWebGPUSupported() {
   return typeof navigator !== "undefined" && !!navigator.gpu;
 }
 
-function buildWebGLRenderer({ size, antialias, alpha }) {
-  const renderer = new THREE.WebGLRenderer({ antialias, alpha });
+function buildWebGPURenderer({ size, antialias, alpha }) {
+  const renderer = new WebGPURenderer({ antialias, alpha });
+
+  // Keep color and shadow behavior aligned with the legacy WebGL path while
+  // using WebGPU-only rendering.
   renderer.setPixelRatio(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
-  renderer.setSize(size.width, size.height);
+  renderer.setSize(size.width, size.height, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  return { renderer, rendererKind: "webgl" };
+
+  const initPromise = typeof renderer.init === "function" ? renderer.init() : Promise.resolve();
+
+  return { renderer, rendererKind: "webgpu", initPromise };
 }
 
 /**
  * Factory that centralizes renderer creation so CreatureStudio and Zoo-style
- * apps can switch to WebGPU in one place. For now we default to WebGL but
- * surface detection data that callers can use to gate overlays or warnings.
+ * apps can switch to WebGPU in one place. Phase 1 requires WebGPU-only;
+ * if WebGPU is unavailable an error is thrown so the caller can present the
+ * "WebGPU Required" overlay instead of silently falling back to WebGL.
  */
 export function createRenderKitRenderer({ size = { width: 800, height: 600 }, preferWebGPU = true, antialias = true, alpha = true } = {}) {
-  const wantsWebGPU = preferWebGPU && isWebGPUSupported();
-
-  // WebGPU renderer wiring stays in one place for easy future enablement.
-  // eslint-disable-next-line no-unused-vars
-  if (wantsWebGPU) {
-    // Placeholder seam: once WebGPURenderer is enabled, wire it here and
-    // keep the signature intact so dependents stay stable.
+  if (preferWebGPU && !isWebGPUSupported()) {
+    throw new Error("[renderkit] WebGPU is required but navigator.gpu is not available in this environment.");
   }
 
-  return buildWebGLRenderer({ size, antialias, alpha });
+  if (!preferWebGPU) {
+    throw new Error("[renderkit] WebGPU-only renderer invoked with preferWebGPU=false; Zoo parity forbids WebGL fallback.");
+  }
+
+  return buildWebGPURenderer({ size, antialias, alpha });
 }

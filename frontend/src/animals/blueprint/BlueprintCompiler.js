@@ -11,6 +11,7 @@
 import { QuadrupedBlueprintAdapter } from "./adapters/QuadrupedBlueprintAdapter.js";
 import { BipedBlueprintAdapter } from "./adapters/BipedBlueprintAdapter.js";
 import { WingedBlueprintAdapter } from "./adapters/WingedBlueprintAdapter.js";
+import { NoPedBlueprintAdapter } from "./adapters/NoPedBlueprintAdapter.js";
 
 const DEFAULT_CONTRACT_VERSION = "1.0.0";
 const DEFAULT_COMPILER_VERSION = "0.1.0";
@@ -37,6 +38,7 @@ export class BlueprintCompiler {
       quadruped: new QuadrupedBlueprintAdapter(),
       biped: new BipedBlueprintAdapter(),
       winged: new WingedBlueprintAdapter(),
+      nopeds: new NoPedBlueprintAdapter(),
     };
     this.contractVersion = contractVersion || DEFAULT_CONTRACT_VERSION;
     this.compilerVersion = compilerVersion || DEFAULT_COMPILER_VERSION;
@@ -53,7 +55,7 @@ export class BlueprintCompiler {
       throw new Error("BlueprintCompiler.compile requires a SpeciesBlueprint");
     }
 
-    const bodyPlanType = blueprint?.bodyPlan?.type;
+    const bodyPlanType = (blueprint?.bodyPlan?.type || "").toLowerCase();
     const adapter = this.adapters[bodyPlanType];
 
     if (!adapter) {
@@ -62,6 +64,19 @@ export class BlueprintCompiler {
     }
 
     const adapted = adapter.adapt(blueprint);
+
+    if (adapted.validation?.errors?.length) {
+      const joined = adapted.validation.errors.join("; ");
+      throw new Error(`Blueprint validation failed: ${joined}`);
+    }
+
+    const canonicalDefinition = {
+      skeleton: adapted.canonicalSkeleton,
+      chains: adapted.canonicalChains,
+      bodyParts: adapted.canonicalBodyParts,
+      materials: adapted.materialsIntent || {},
+      locomotion: adapted.locomotion || {},
+    };
 
     return {
       contractVersion: this.contractVersion,
@@ -76,6 +91,7 @@ export class BlueprintCompiler {
       canonicalSkeleton: adapted.canonicalSkeleton,
       canonicalChains: adapted.canonicalChains,
       canonicalBodyParts: adapted.canonicalBodyParts,
+      canonicalDefinition,
       materialsIntent: adapted.materialsIntent || {},
       locomotion: adapted.locomotion || {},
       validation: adapted.validation || { errors: [], warnings: [] },

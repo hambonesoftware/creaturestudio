@@ -5,6 +5,9 @@ import {
   createGroundPlane,
   createLightingRig,
   createRenderKitRenderer,
+  ensureWebGPUOverlay,
+  removeWebGPUOverlay,
+  isWebGPUSupported,
   disposeLightingRig,
   resizeCamera,
 } from "../renderkit/index.js";
@@ -32,6 +35,7 @@ class CreatureViewport {
     }
 
     this.container = containerElement;
+    this.webgpuOverlay = null;
 
     // Core Three.js objects
     this.scene = new THREE.Scene();
@@ -47,12 +51,32 @@ class CreatureViewport {
       aspect: width / height,
     });
 
-    // Renderer setup (centralized seam for WebGPU/WebGL)
-    const { renderer } = createRenderKitRenderer({
-      size: { width, height },
-      preferWebGPU: true,
-    });
-    this.renderer = renderer;
+    this.renderer = null;
+    this.rendererReadyPromise = null;
+
+    // Renderer setup (WebGPU only for Zoo parity)
+    if (!isWebGPUSupported()) {
+      this.webgpuOverlay = ensureWebGPUOverlay(
+        this.container,
+        "WebGPU is required for CreatureStudio. Please use a browser and GPU stack with navigator.gpu enabled."
+      );
+    } else {
+      try {
+        const { renderer, initPromise } = createRenderKitRenderer({
+          size: { width, height },
+          preferWebGPU: true,
+        });
+        this.renderer = renderer;
+        this.rendererReadyPromise = initPromise || Promise.resolve();
+        removeWebGPUOverlay(this.container);
+      } catch (error) {
+        console.error("[CreatureViewport] Failed to create WebGPU renderer", error);
+        this.webgpuOverlay = ensureWebGPUOverlay(
+          this.container,
+          "WebGPU is required to render this viewport. Renderer creation failed."
+        );
+      }
+    }
 
     // Remove any existing canvas in the container (defensive)
     const existingCanvas = this.container.querySelector("canvas");
@@ -61,14 +85,17 @@ class CreatureViewport {
     }
 
     // Attach the renderer canvas
-    this.container.appendChild(this.renderer.domElement);
+    if (this.renderer && this.renderer.domElement) {
+      this.container.appendChild(this.renderer.domElement);
+    }
 
     // Camera controls
-    this.controls = createOrbitControls(this.camera, this.renderer.domElement);
+    this.controls = this.renderer ? createOrbitControls(this.camera, this.renderer.domElement) : null;
 
     // Lights + ground
     this.lightingMode = "allAround";
     this.lightingGroup = null;
+    this.ground = null;
     this._setupLights(this.lightingMode);
     this._setupGround();
 
@@ -118,8 +145,26 @@ class CreatureViewport {
    * Simple ground plane so the creature does not float in space.
    */
   _setupGround() {
-    const ground = createGroundPlane();
-    this.scene.add(ground);
+    if (this.ground) {
+      return;
+    }
+    this.ground = createGroundPlane();
+    this.scene.add(this.ground);
+  }
+
+  _teardownGround() {
+    if (!this.ground) {
+      return;
+    }
+
+    this.scene.remove(this.ground);
+    if (this.ground.geometry && typeof this.ground.geometry.dispose === "function") {
+      this.ground.geometry.dispose();
+    }
+    if (this.ground.material && typeof this.ground.material.dispose === "function") {
+      this.ground.material.dispose();
+    }
+    this.ground = null;
   }
 
   /**
@@ -135,7 +180,9 @@ class CreatureViewport {
 
     resizeCamera(this.camera, safeWidth, safeHeight);
 
-    this.renderer.setSize(safeWidth, safeHeight);
+    if (this.renderer) {
+      this.renderer.setSize(safeWidth, safeHeight);
+    }
   }
 
   /**
@@ -168,6 +215,21 @@ class CreatureViewport {
   setRuntime(runtimeResult) {
     this._activeRuntime = runtimeResult || null;
     this._lastFrameTime = null;
+    const wantsNoLights = runtimeResult?.disableDefaultLighting === true;
+    const wantsNoGround = runtimeResult?.disableDefaultGround === true;
+
+    if (wantsNoLights) {
+      this._teardownLights();
+    } else if (!this.lightingGroup) {
+      this._setupLights(this.lightingMode);
+    }
+
+    if (wantsNoGround) {
+      this._teardownGround();
+    } else if (!this.ground) {
+      this._setupGround();
+    }
+
     const rootGroup = runtimeResult ? runtimeResult.displayRoot || runtimeResult.root : null;
     this.setCreature(rootGroup);
   }
@@ -179,8 +241,33 @@ class CreatureViewport {
     if (this._running) {
       return;
     }
+
+    if (!this.renderer) {
+      this.webgpuOverlay = ensureWebGPUOverlay(
+        this.container,
+        "WebGPU is required to render this viewport."
+      );
+      return;
+    }
+
     this._running = true;
-    this._scheduleNextFrame();
+
+    const kickoff = this.rendererReadyPromise || Promise.resolve();
+    kickoff
+      .catch((error) => {
+        console.error("[CreatureViewport] WebGPU renderer failed to initialize", error);
+        this.webgpuOverlay = ensureWebGPUOverlay(
+          this.container,
+          "WebGPU renderer failed to initialize. Please check browser support."
+        );
+        this._running = false;
+      })
+      .then(() => {
+        if (!this._running) {
+          return;
+        }
+        this._scheduleNextFrame();
+      });
   }
 
   /**
@@ -200,6 +287,11 @@ class CreatureViewport {
 
   _animate(timestamp) {
     if (!this._running) {
+      return;
+    }
+
+    if (!this.renderer) {
+      this._running = false;
       return;
     }
 
@@ -226,7 +318,7 @@ class CreatureViewport {
   }
 
   /**
-   * Clean up WebGL resources and detach from the DOM.
+   * Clean up renderer resources and detach from the DOM.
    * Called from viewportBridge.disposeCreatureViewport().
    */
   dispose() {
@@ -241,6 +333,9 @@ class CreatureViewport {
       this.scene.remove(this.creatureRoot);
     }
     this.creatureRoot = null;
+
+    this._teardownGround();
+    this._teardownLights();
 
     // Dispose geometries and materials for all meshes.
     this.scene.traverse((obj) => {
@@ -276,6 +371,9 @@ class CreatureViewport {
     }
 
     this.renderer = null;
+    this.rendererReadyPromise = null;
+
+    removeWebGPUOverlay(this.container);
   }
 }
 

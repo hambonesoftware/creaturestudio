@@ -1,15 +1,14 @@
 /**
- * BipedBlueprintAdapter
+ * NoPedBlueprintAdapter
  * ---------------------
  *
- * Converts a SpeciesBlueprint with a biped body plan into a canonical,
- * deterministic representation similar to the quadruped adapter but with
- * biped-specific required chains. Keeps validation, normalization, and runtime
- * blueprint shaping consistent with the Zoo-style pipeline.
+ * Converts a "nopeds" body plan (no limbs) SpeciesBlueprint into a canonical
+ * representation. Enforces required chains/bones, validates generator presence,
+ * and shapes a runtime-ready blueprint for the shared anatomy V2 pipeline.
  */
 
-const REQUIRED_CHAINS = ["spine", "neck", "head", "legL", "legR"];
-const OPTIONAL_CHAINS = ["tail", "earLeft", "earRight", "armL", "armR", "wingLeft", "wingRight", "trunk"];
+const REQUIRED_CHAINS = ["spine"];
+const OPTIONAL_CHAINS = ["tail", "trunk", "finLeft", "finRight"];
 
 function deepClone(value) {
   return value ? JSON.parse(JSON.stringify(value)) : value;
@@ -20,16 +19,16 @@ function normalizeVector(vec) {
   return vec.map((n) => (typeof n === "number" && Number.isFinite(n) ? n : 0));
 }
 
-export class BipedBlueprintAdapter {
+export class NoPedBlueprintAdapter {
   /**
-   * Adapt a biped SpeciesBlueprint into a canonical compiled representation.
+   * Adapt a nopeds SpeciesBlueprint into a canonical compiled representation.
    *
    * @param {import("../../../types/SpeciesBlueprint").SpeciesBlueprint} blueprint
    * @returns {object}
    */
   adapt(blueprint) {
     if (!blueprint) {
-      throw new Error("BipedBlueprintAdapter requires a SpeciesBlueprint");
+      throw new Error("NoPedBlueprintAdapter requires a SpeciesBlueprint");
     }
 
     const validation = { errors: [], warnings: [] };
@@ -47,7 +46,7 @@ export class BipedBlueprintAdapter {
     );
 
     return {
-      bodyPlanType: "biped",
+      bodyPlanType: "nopeds",
       canonicalSkeleton,
       canonicalChains,
       canonicalBodyParts,
@@ -60,8 +59,8 @@ export class BipedBlueprintAdapter {
 
   #validateBodyPlan(blueprint, validation) {
     const type = blueprint?.bodyPlan?.type;
-    if (type !== "biped") {
-      validation.errors.push(`Expected bodyPlan.type=\"biped\" but received ${type || "undefined"}`);
+    if (type !== "nopeds") {
+      validation.errors.push(`Expected bodyPlan.type=\"nopeds\" but received ${type || "undefined"}`);
     }
   }
 
@@ -99,6 +98,7 @@ export class BipedBlueprintAdapter {
   #normalizeChains(chains, canonicalSkeleton, validation) {
     const byName = new Map();
     const skeletonBoneNames = new Set(canonicalSkeleton.bones.map((b) => b.name));
+    const allowedChains = new Set([...REQUIRED_CHAINS, ...OPTIONAL_CHAINS]);
 
     for (const chain of Array.isArray(chains) ? chains : []) {
       if (!chain || !chain.name) {
@@ -106,6 +106,10 @@ export class BipedBlueprintAdapter {
         continue;
       }
       const name = chain.name;
+      if (!allowedChains.has(name)) {
+        validation.warnings.push(`Skipping unsupported chain name for nopeds: ${name}`);
+        continue;
+      }
       if (byName.has(name)) {
         validation.errors.push(`Duplicate chain definition for ${name}`);
         continue;
@@ -207,7 +211,7 @@ export class BipedBlueprintAdapter {
 
   #buildRuntimeBlueprint(blueprint, canonicalSkeleton, canonicalChains, canonicalBodyParts) {
     const runtimeBlueprint = deepClone(blueprint) || {};
-    runtimeBlueprint.bodyPlan = { ...(runtimeBlueprint.bodyPlan || {}), type: "biped" };
+    runtimeBlueprint.bodyPlan = { ...(runtimeBlueprint.bodyPlan || {}), type: "nopeds" };
     runtimeBlueprint.skeleton = canonicalSkeleton;
     runtimeBlueprint.chainsV2 = canonicalChains.map((chain) => ({
       name: chain.name,
@@ -236,4 +240,4 @@ export class BipedBlueprintAdapter {
   }
 }
 
-export default BipedBlueprintAdapter;
+export default NoPedBlueprintAdapter;
