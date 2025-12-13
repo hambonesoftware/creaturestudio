@@ -3,8 +3,9 @@ import * as THREE from "three";
 // between the legacy and V2 builders based on the blueprint contents.
 import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
 import { CreatureViewport } from "./CreatureViewport.js";
-import { getState } from "../studioState.js";
+import { getState, setError } from "../studioState.js";
 import { BlueprintCompiler } from "../animals/blueprint/BlueprintCompiler.js";
+import { createZooParityRegistry } from "../animals/registry/index.js";
 
 /**
  * Module-level singleton viewport used by the layout and panels.
@@ -12,6 +13,7 @@ import { BlueprintCompiler } from "../animals/blueprint/BlueprintCompiler.js";
 let viewportInstance = null;
 let viewportContainerElement = null;
 let compilerInstance = null;
+let animalRegistryInstance = null;
 
 function getContainerSize() {
   if (!viewportContainerElement) {
@@ -68,6 +70,13 @@ export function disposeCreatureViewport() {
   viewportContainerElement = null;
 }
 
+export function getAnimalRegistry() {
+  if (!animalRegistryInstance) {
+    animalRegistryInstance = createZooParityRegistry();
+  }
+  return animalRegistryInstance;
+}
+
 export function setViewportLighting(mode) {
   if (!viewportInstance || typeof viewportInstance.setLightingMode !== "function") {
     return;
@@ -99,22 +108,31 @@ export function updateViewportFromBlueprint(blueprint) {
   try {
     compiledSpecies = compilerInstance.compile(blueprint);
     runtimeBlueprint = compiledSpecies.runtime.blueprint;
-    if (compiledSpecies.validation?.errors?.length) {
-      console.warn("[BlueprintCompiler] Validation errors:", compiledSpecies.validation.errors);
-    }
     if (compiledSpecies.validation?.warnings?.length) {
       console.info("[BlueprintCompiler] Validation warnings:", compiledSpecies.validation.warnings);
     }
+    setError(null);
   } catch (error) {
-    console.warn("[viewportBridge] Falling back to raw blueprint after compile error", error);
+    console.error("[viewportBridge] Blueprint compile failed", error);
+    setError(error?.message || "Blueprint compile failed");
+    viewportInstance.setRuntime(null);
+    return;
   }
 
   const state = getState();
-  // Build the creature using the unified creation helper. This will
-  // automatically select the V2 pipeline when available.
-  const runtime = createCreatureFromBlueprint(runtimeBlueprint, {
-    isolatePart: state.debugIsolatePart || undefined,
-  });
+  let runtime = null;
+  try {
+    // Build the creature using the unified creation helper. This will
+    // automatically select the V2 pipeline when available.
+    runtime = createCreatureFromBlueprint(runtimeBlueprint, {
+      isolatePart: state.debugIsolatePart || undefined,
+    });
+  } catch (error) {
+    console.error("[viewportBridge] Runtime build failed", error);
+    setError(error?.message || "Failed to build creature runtime");
+    viewportInstance.setRuntime(null);
+    return;
+  }
 
   if (compiledSpecies) {
     runtime.compiledSpecies = compiledSpecies;
@@ -182,7 +200,11 @@ export function updateViewportFromBlueprint(blueprint) {
   if (state.debugChainName) {
     let chainBones = [];
     // Support legacy blueprint chains (object maps) and extraChains.
-    if (blueprint.chains && (blueprint.chains[state.debugChainName] || (blueprint.chains.extraChains && blueprint.chains.extraChains[state.debugChainName]))) {
+    if (
+      blueprint.chains &&
+      (blueprint.chains[state.debugChainName] ||
+        (blueprint.chains.extraChains && blueprint.chains.extraChains[state.debugChainName]))
+    ) {
       chainBones = blueprint.chains[state.debugChainName] || blueprint.chains.extraChains[state.debugChainName] || [];
     } else if (Array.isArray(blueprint.chainsV2)) {
       // Look up the chain definition in V2 blueprints.
@@ -230,4 +252,21 @@ export function updateViewportFromBlueprint(blueprint) {
   runtime.skeletonHelper = skeletonHelper;
 
   viewportInstance.setRuntime(runtime);
+  setError(null);
+}
+
+export async function loadAnimalPen(animalKey) {
+  if (!viewportInstance) {
+    return null;
+  }
+
+  const registry = getAnimalRegistry();
+  const penRuntime = await registry.createPen(animalKey);
+
+  if (!penRuntime) {
+    return null;
+  }
+
+  viewportInstance.setRuntime(penRuntime);
+  return penRuntime;
 }
