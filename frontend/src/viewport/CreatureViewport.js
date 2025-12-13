@@ -1,5 +1,13 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import {
+  createOrbitCamera,
+  createOrbitControls,
+  createGroundPlane,
+  createLightingRig,
+  createRenderKitRenderer,
+  disposeLightingRig,
+  resizeCamera,
+} from "../renderkit/index.js";
 
 /**
  * CreatureViewport
@@ -33,23 +41,18 @@ class CreatureViewport {
     const rect = this.container.getBoundingClientRect();
     const width = rect.width || this.container.clientWidth || 800;
     const height = rect.height || this.container.clientHeight || 600;
-    const aspect = width / height;
 
-    // Camera setup
-    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 300);
-    this.camera.position.set(6, 4, 8);
-    this.camera.lookAt(0, 1, 0);
-
-    // Renderer setup
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
+    // Camera setup (shared via render kit)
+    this.camera = createOrbitCamera({
+      aspect: width / height,
     });
-    this.renderer.setPixelRatio(window.devicePixelRatio || 1);
-    this.renderer.setSize(width, height);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Renderer setup (centralized seam for WebGPU/WebGL)
+    const { renderer } = createRenderKitRenderer({
+      size: { width, height },
+      preferWebGPU: true,
+    });
+    this.renderer = renderer;
 
     // Remove any existing canvas in the container (defensive)
     const existingCanvas = this.container.querySelector("canvas");
@@ -61,14 +64,7 @@ class CreatureViewport {
     this.container.appendChild(this.renderer.domElement);
 
     // Camera controls
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 1, 0);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.enablePan = true;
-    this.controls.minDistance = 2;
-    this.controls.maxDistance = 90;
-    this.controls.update();
+    this.controls = createOrbitControls(this.camera, this.renderer.domElement);
 
     // Lights + ground
     this.lightingMode = "allAround";
@@ -95,14 +91,7 @@ class CreatureViewport {
       this._teardownLights();
     }
 
-    const group = new THREE.Group();
-    group.name = `Lighting_${mode}`;
-
-    if (mode === "studio") {
-      this._buildStudioLighting(group);
-    } else {
-      this._buildAllAroundLighting(group);
-    }
+    const group = createLightingRig(mode);
 
     this.scene.add(group);
     this.lightingGroup = group;
@@ -112,70 +101,9 @@ class CreatureViewport {
   _teardownLights() {
     if (!this.lightingGroup) return;
 
-    this.lightingGroup.traverse((obj) => {
-      if (obj.isLight && obj.shadow && obj.shadow.map) {
-        obj.shadow.map.dispose();
-      }
-    });
-
+    disposeLightingRig(this.lightingGroup);
     this.scene.remove(this.lightingGroup);
     this.lightingGroup = null;
-  }
-
-  _buildStudioLighting(group) {
-    const keySpot = new THREE.SpotLight(0xffffff, 3.1, 46, Math.PI / 3.7, 0.38, 1);
-    keySpot.position.set(7.5, 10.5, 6.5);
-    keySpot.castShadow = true;
-    keySpot.shadow.mapSize.set(2048, 2048);
-    keySpot.target.position.set(0, 1, 0);
-    group.add(keySpot);
-    group.add(keySpot.target);
-
-    const fillSpot = new THREE.SpotLight(0xe8f0ff, 2.4, 44, Math.PI / 3.6, 0.48, 1);
-    fillSpot.position.set(-8.5, 9.5, 5.5);
-    fillSpot.castShadow = true;
-    fillSpot.shadow.mapSize.set(1024, 1024);
-    fillSpot.target.position.set(0, 1, 0);
-    group.add(fillSpot);
-    group.add(fillSpot.target);
-
-    const rimSpot = new THREE.SpotLight(0xbcd8ff, 1.7, 54, Math.PI / 3.45, 0.3, 1);
-    rimSpot.position.set(0, 11.5, -9);
-    rimSpot.castShadow = true;
-    rimSpot.shadow.mapSize.set(1024, 1024);
-    rimSpot.target.position.set(0, 1, 0);
-    group.add(rimSpot);
-    group.add(rimSpot.target);
-
-    const studioAmbient = new THREE.AmbientLight(0xffffff, 1.45);
-    group.add(studioAmbient);
-
-    const skyFill = new THREE.HemisphereLight(0xf5f8ff, 0x1e2533, 1.1);
-    skyFill.position.set(0, 9, 0);
-    group.add(skyFill);
-  }
-
-  _buildAllAroundLighting(group) {
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x2c3a52, 6.4);
-    hemi.position.set(0, 7, 0);
-    group.add(hemi);
-
-    const ambient = new THREE.AmbientLight(0xffffff, 4.65);
-    group.add(ambient);
-
-    const north = new THREE.DirectionalLight(0xf5f8ff, 4.85);
-    north.position.set(0, 12, 6);
-    north.castShadow = true;
-    north.shadow.mapSize.set(1024, 1024);
-    group.add(north);
-
-    const west = new THREE.DirectionalLight(0xf5f8ff, 4.35);
-    west.position.set(-6.5, 9, -3.5);
-    group.add(west);
-
-    const east = new THREE.DirectionalLight(0xf5f8ff, 4.25);
-    east.position.set(6.5, 9, -3.5);
-    group.add(east);
   }
 
   setLightingMode(mode) {
@@ -190,19 +118,7 @@ class CreatureViewport {
    * Simple ground plane so the creature does not float in space.
    */
   _setupGround() {
-    const groundRadius = 6;
-    const geometry = new THREE.CircleGeometry(groundRadius, 64);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x11121b,
-      roughness: 0.9,
-      metalness: 0.0,
-    });
-
-    const ground = new THREE.Mesh(geometry, material);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    ground.position.y = 0;
-
+    const ground = createGroundPlane();
     this.scene.add(ground);
   }
 
@@ -217,8 +133,7 @@ class CreatureViewport {
     const safeWidth = Math.max(1, width | 0);
     const safeHeight = Math.max(1, height | 0);
 
-    this.camera.aspect = safeWidth / safeHeight;
-    this.camera.updateProjectionMatrix();
+    resizeCamera(this.camera, safeWidth, safeHeight);
 
     this.renderer.setSize(safeWidth, safeHeight);
   }

@@ -16,7 +16,8 @@ import { buildCreatureFromBlueprintV2 } from "./CreatureRuntimeV2.js";
  *     bonesByName: Map<string, THREE.Bone>,
  *   }
  */
-export function createCreatureFromBlueprint(blueprint, options = {}) {
+export function createCreatureFromBlueprint(blueprintOrCompiled, options = {}) {
+  const { blueprint, compiled } = unwrapBlueprint(blueprintOrCompiled);
   if (!blueprint) {
     throw new Error('createCreatureFromBlueprint requires a SpeciesBlueprint');
   }
@@ -27,7 +28,8 @@ export function createCreatureFromBlueprint(blueprint, options = {}) {
   const hasUnifiedAnatomy = (hasV2Chains && hasV2Parts) || (hasAnatomyBlock && hasAnatomyParts);
   const featureFlagV2 = options?.useAnatomyV2 ?? true;
   const forceLegacy = blueprint?.meta?.forceLegacyBuild === true;
-  const blueprintName = blueprint?.meta?.name || blueprint?.meta?.speciesName || 'Unknown';
+  const blueprintName =
+    compiled?.sourceMeta?.name || blueprint?.meta?.name || blueprint?.meta?.speciesName || 'Unknown';
 
   if (blueprint && hasUnifiedAnatomy && featureFlagV2 && !forceLegacy) {
     return buildCreatureFromBlueprintV2(blueprint, options);
@@ -39,7 +41,22 @@ export function createCreatureFromBlueprint(blueprint, options = {}) {
       ? 'useAnatomyV2 disabled'
       : 'missing anatomy V2 data';
   console.info(`[Telemetry] Using legacy runtime for ${blueprintName}: ${reason}`);
-  return buildCreatureFromBlueprint(blueprint, options);
+  const runtime = buildCreatureFromBlueprint(blueprint, options);
+  if (compiled) {
+    runtime.compiledSpecies = compiled;
+  }
+  return runtime;
 }
 
 export { buildCreatureFromBlueprint };
+
+function unwrapBlueprint(blueprintOrCompiled) {
+  if (blueprintOrCompiled?.contractVersion && blueprintOrCompiled?.runtime?.blueprint) {
+    return {
+      blueprint: blueprintOrCompiled.runtime.blueprint,
+      compiled: blueprintOrCompiled,
+    };
+  }
+
+  return { blueprint: blueprintOrCompiled, compiled: null };
+}

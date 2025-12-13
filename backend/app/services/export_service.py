@@ -1,24 +1,33 @@
 """Services for exporting Species Blueprints as Zoo-style animal bundles.
 
-The main entrypoint is :func:`export_animal`, which renders a set of JS
-modules and a copy of the original blueprint into a directory structure
-that roughly matches the existing Zoo project layout, and then zips that
-directory into a distributable archive.
+Phase 5 converts the export surface to **data-only bundles** that match the
+``docs/export_contract_v1.md`` layout:
+
+```
+manifest.json
+AnimalDefinition.json
+materials.json
+runtime.json        (optional)
+blueprint.json      (optional)
+assets/
+```
+
+Exports contain stable JSON suitable for Zoo and other Zoo-style renderers.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Any
-
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from typing import Dict, Any, List
 
 from app.config import Settings, get_settings
-from app.models.blueprint import SpeciesBlueprint
+from app.models.blueprint import BodyPartDefinition, BodyPartsConfig, Chains, SpeciesBlueprint
 
 
 def _safe_animal_name(name: str) -> str:
@@ -30,54 +39,254 @@ def _safe_animal_name(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "", name)
 
 
-def _templates_env(templates_dir: Path) -> Environment:
-    """Create a Jinja2 environment pointed at *templates_dir*."""
-    env = Environment(
-        loader=FileSystemLoader(str(templates_dir)),
-        autoescape=select_autoescape(enabled_extensions=("html", "xml")),
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-    # JS templates should not be auto-escaped; we only use explicit JSON
-    # strings that we mark as safe.
-    env.autoescape = False
-    return env
+CONTRACT_VERSION = "1.0.0"
+DEFAULT_MIN_ZOO_VERSION = "0.1.0"
 
 
-def _blueprint_to_context(blueprint: SpeciesBlueprint, version: str) -> Dict[str, Any]:
-    """Convert a :class:`SpeciesBlueprint` to a template context dict."""
-    # Pydantic v1 vs v2 compatibility for dict export.
-    try:
-        blueprint_dict = blueprint.model_dump()
-    except AttributeError:
-        blueprint_dict = blueprint.dict()
+def _compute_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
-    meta = blueprint.meta.dict()
-    skeleton = blueprint.skeleton
-    chains = blueprint.chains
-    sizes = blueprint.sizes
 
-    bones_array = [bone.dict() for bone in skeleton.bones]
+def _material_slot_from_definition(
+    name: str, definition: Any, force_node_tsl: bool = False
+) -> Dict[str, Any]:
+    parameters: Dict[str, Any] = {}
+    if getattr(definition, "color", None):
+        parameters["color"] = definition.color
+    if getattr(definition, "roughness", None) is not None:
+        parameters["roughness"] = definition.roughness
+    if getattr(definition, "metallic", None) is not None:
+        parameters["metallic"] = definition.metallic
+    if getattr(definition, "specular", None) is not None:
+        parameters["specular"] = definition.specular
+    if getattr(definition, "emissive", None):
+        parameters["emissive"] = definition.emissive
 
-    context: Dict[str, Any] = {
-        "animalName": blueprint.meta.name,
-        "animalSafeName": _safe_animal_name(blueprint.meta.name),
-        "version": version,
-        "blueprint": blueprint_dict,
-        "meta": meta,
-        "bones": bones_array,
-        "chains": chains.dict(),
-        "sizes": sizes.dict(),
+    workflow = "pbr"
+    node_graph: Dict[str, Any] | None = None
+
+    # Heuristic: trunked quadrupeds (elephants) should signal the node/TSL path.
+    if force_node_tsl:
+        workflow = "node/tsl"
+        node_graph = {
+            "graph": "elephantSkinTSL",
+            "parameters": {
+                "albedoTint": parameters.get("color", "#7a6f63"),
+                "roughness": parameters.get("roughness", 0.78),
+                "displacement": 0.02,
+            },
+        }
+
+    slot = {
+        "slot": name,
+        "type": name,
+        "workflow": workflow,
+        "parameters": parameters,
     }
 
-    # Pre-serialised JSON strings for direct embedding in the JS templates.
-    context["blueprint_json"] = json.dumps(blueprint_dict, indent=2)
-    context["meta_json"] = json.dumps(meta, indent=2)
-    context["bones_json"] = json.dumps(bones_array, indent=2)
-    context["chains_json"] = json.dumps(chains.dict(), indent=2)
-    context["sizes_json"] = json.dumps(sizes.dict(), indent=2)
+    if node_graph:
+        slot["nodeGraph"] = node_graph
+        slot["useTSLSkin"] = True
 
-    return context
+    return slot
+
+
+def _material_slots(blueprint: SpeciesBlueprint) -> List[Dict[str, Any]]:
+    materials = blueprint.materials
+    slots: List[Dict[str, Any]] = []
+    animal_is_elephant = blueprint.bodyPlan.hasTrunk or "elephant" in blueprint.meta.name.lower()
+
+    if materials.surface:
+        slots.append(
+            _material_slot_from_definition(
+                "surface", materials.surface, force_node_tsl=animal_is_elephant
+            )
+        )
+    if materials.eye:
+        slots.append(
+            _material_slot_from_definition(
+                "eye", materials.eye, force_node_tsl=False
+            )
+        )
+    if materials.tusk:
+        slots.append(
+            _material_slot_from_definition(
+                "tusk", materials.tusk, force_node_tsl=False
+            )
+        )
+    if materials.nail:
+        slots.append(
+            _material_slot_from_definition(
+                "nail", materials.nail, force_node_tsl=False
+            )
+        )
+
+    for key, definition in materials.extraMaterials.items():
+        slots.append(
+            _material_slot_from_definition(
+                key, definition, force_node_tsl=animal_is_elephant
+            )
+        )
+
+    return slots
+
+
+def _body_parts_from_v2(definitions: List[BodyPartDefinition]) -> List[Dict[str, Any]]:
+    parts: List[Dict[str, Any]] = []
+    for definition in definitions:
+        parts.append(
+            {
+                "name": definition.name,
+                "generator": definition.generator,
+                "chain": definition.chain,
+                "options": definition.options,
+            }
+        )
+    return parts
+
+
+def _body_parts_from_v1(config: BodyPartsConfig) -> List[Dict[str, Any]]:
+    parts: List[Dict[str, Any]] = []
+    for key in [
+        "torso",
+        "neck",
+        "head",
+        "trunk",
+        "tail",
+        "earLeft",
+        "earRight",
+        "frontLegL",
+        "frontLegR",
+        "backLegL",
+        "backLegR",
+    ]:
+        ref = getattr(config, key)
+        if ref:
+            parts.append(
+                {
+                    "name": key,
+                    "generator": ref.generator,
+                    "chain": ref.chain,
+                    "options": ref.options,
+                }
+            )
+    for name, ref in config.extraParts.items():
+        parts.append(
+            {
+                "name": name,
+                "generator": ref.generator,
+                "chain": ref.chain,
+                "options": ref.options,
+            }
+        )
+    return parts
+
+
+def _animal_definition_payload(
+    blueprint: SpeciesBlueprint, animal_safe: str, schema_version: str
+) -> Dict[str, Any]:
+    skeleton = [
+        {
+            "name": bone.name,
+            "parent": bone.parent or None,
+            "restTransform": {
+                "position": bone.position,
+                "rotation": [0.0, 0.0, 0.0],
+                "scale": [1.0, 1.0, 1.0],
+            },
+        }
+        for bone in blueprint.skeleton.bones
+    ]
+
+    if blueprint.bodyPartsV2:
+        parts = _body_parts_from_v2(blueprint.bodyPartsV2)
+    elif blueprint.bodyParts:
+        parts = _body_parts_from_v1(blueprint.bodyParts)
+    else:
+        parts = []
+
+    chains: Chains | None = None
+    if blueprint.chains:
+        chains = blueprint.chains
+
+    definition: Dict[str, Any] = {
+        "contractVersion": CONTRACT_VERSION,
+        "schemaVersion": schema_version,
+        "minZooVersion": DEFAULT_MIN_ZOO_VERSION,
+        "speciesKey": animal_safe,
+        "displayName": blueprint.meta.name,
+        "skeleton": skeleton,
+        "parts": parts,
+        "materials": _material_slots(blueprint),
+    }
+
+    if chains:
+        definition["chains"] = chains.dict()
+
+    return definition
+
+
+def _materials_payload(blueprint: SpeciesBlueprint, schema_version: str) -> Dict[str, Any]:
+    payload = {
+        "contractVersion": CONTRACT_VERSION,
+        "schemaVersion": schema_version,
+        "minZooVersion": DEFAULT_MIN_ZOO_VERSION,
+        "slots": _material_slots(blueprint),
+        "textures": {},
+    }
+    return payload
+
+
+def _runtime_payload(blueprint: SpeciesBlueprint, schema_version: str) -> Dict[str, Any]:
+    locomotion: Dict[str, Any] = {}
+    behavior: Dict[str, Any] = {}
+
+    if blueprint.behaviorPresets.gait:
+        locomotion["gait"] = blueprint.behaviorPresets.gait
+    if blueprint.behaviorPresets.idleBehaviors:
+        behavior["idleBehaviors"] = blueprint.behaviorPresets.idleBehaviors
+    if blueprint.behaviorPresets.specialInteractions:
+        behavior["specialInteractions"] = blueprint.behaviorPresets.specialInteractions
+
+    payload: Dict[str, Any] = {
+        "contractVersion": CONTRACT_VERSION,
+        "schemaVersion": schema_version,
+        "minZooVersion": DEFAULT_MIN_ZOO_VERSION,
+    }
+
+    if locomotion:
+        payload["locomotion"] = locomotion
+    if behavior:
+        payload["behavior"] = behavior
+
+    return payload
+
+
+def _manifest_payload(
+    version: str,
+    animal_name: str,
+    schema_version: str,
+    checksums: Dict[str, str],
+) -> Dict[str, Any]:
+    return {
+        "contractVersion": CONTRACT_VERSION,
+        "schemaVersion": schema_version,
+        "minZooVersion": DEFAULT_MIN_ZOO_VERSION,
+        "tooling": {
+            "app": "CreatureStudio",
+            "version": version,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        "animal": {
+            "speciesKey": animal_name,
+            "displayName": animal_name,
+        },
+        "payloads": checksums,
+    }
 
 
 def export_animal(
@@ -114,39 +323,46 @@ def export_animal(
         shutil.rmtree(staging_dir)
     staging_dir.mkdir(parents=True, exist_ok=True)
 
-    animal_dir = staging_dir / animal_safe
-    animal_dir.mkdir(parents=True, exist_ok=True)
+    schema_version = blueprint.meta.schemaVersion
 
-    templates_dir = Path(__file__).resolve().parents[1] / "templates"
-    env = _templates_env(templates_dir)
+    definition_payload = _animal_definition_payload(
+        blueprint, animal_safe, schema_version
+    )
+    materials_payload = _materials_payload(blueprint, schema_version)
+    runtime_payload = _runtime_payload(blueprint, schema_version)
 
-    context = _blueprint_to_context(blueprint, version)
-
-    templates = {
-        "Definition": "AnimalDefinition.js.j2",
-        "Generator": "AnimalGenerator.js.j2",
-        "Creature": "AnimalCreature.js.j2",
-        "Behavior": "AnimalBehavior.js.j2",
-        "Pen": "AnimalPen.js.j2",
+    payload_paths = {
+        "AnimalDefinition.json": definition_payload,
+        "materials.json": materials_payload,
+        "runtime.json": runtime_payload,
     }
 
-    for suffix, template_name in templates.items():
-        template = env.get_template(template_name)
-        rendered = template.render(context)
-        target_path = animal_dir / f"{animal_safe}{suffix}.js"
-        target_path.write_text(rendered, encoding="utf-8")
-
-    # Also include a copy of the original blueprint JSON.
-    blueprint_json_path = animal_dir / f"{animal_safe}Blueprint.json"
+    # Optional traceability: include the source blueprint.
     try:
         blueprint_payload = blueprint.model_dump()
     except AttributeError:
         blueprint_payload = blueprint.dict()
-    blueprint_json_path.write_text(
-        json.dumps(blueprint_payload, indent=2), encoding="utf-8"
+    payload_paths["blueprint.json"] = blueprint_payload
+
+    checksums: Dict[str, str] = {}
+    for filename, payload in payload_paths.items():
+        target_path = staging_dir / filename
+        target_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        checksums[filename] = _compute_sha256(target_path)
+
+    manifest = _manifest_payload(
+        version=version,
+        animal_name=blueprint.meta.name,
+        schema_version=schema_version,
+        checksums=checksums,
+    )
+    manifest_path = staging_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
     )
 
-    # Create the zip archive.
     zip_path = exports_root / f"{bundle_name}.zip"
     if zip_path.exists():
         zip_path.unlink()

@@ -4,12 +4,14 @@ import * as THREE from "three";
 import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
 import { CreatureViewport } from "./CreatureViewport.js";
 import { getState } from "../studioState.js";
+import { BlueprintCompiler } from "../animals/blueprint/BlueprintCompiler.js";
 
 /**
  * Module-level singleton viewport used by the layout and panels.
  */
 let viewportInstance = null;
 let viewportContainerElement = null;
+let compilerInstance = null;
 
 function getContainerSize() {
   if (!viewportContainerElement) {
@@ -87,12 +89,36 @@ export function updateViewportFromBlueprint(blueprint) {
     return;
   }
 
+  if (!compilerInstance) {
+    compilerInstance = new BlueprintCompiler();
+  }
+
+  let runtimeBlueprint = blueprint;
+  let compiledSpecies = null;
+
+  try {
+    compiledSpecies = compilerInstance.compile(blueprint);
+    runtimeBlueprint = compiledSpecies.runtime.blueprint;
+    if (compiledSpecies.validation?.errors?.length) {
+      console.warn("[BlueprintCompiler] Validation errors:", compiledSpecies.validation.errors);
+    }
+    if (compiledSpecies.validation?.warnings?.length) {
+      console.info("[BlueprintCompiler] Validation warnings:", compiledSpecies.validation.warnings);
+    }
+  } catch (error) {
+    console.warn("[viewportBridge] Falling back to raw blueprint after compile error", error);
+  }
+
   const state = getState();
   // Build the creature using the unified creation helper. This will
   // automatically select the V2 pipeline when available.
-  const runtime = createCreatureFromBlueprint(blueprint, {
+  const runtime = createCreatureFromBlueprint(runtimeBlueprint, {
     isolatePart: state.debugIsolatePart || undefined,
   });
+
+  if (compiledSpecies) {
+    runtime.compiledSpecies = compiledSpecies;
+  }
 
   const { viewportMode = "mesh" } = state;
   const creatureName = blueprint.meta && blueprint.meta.name ? blueprint.meta.name : "Creature";
