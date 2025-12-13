@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createStandardMaterial } from "../../renderkit/materialUtils.js";
 
 function createNoiseTexture(baseColor) {
   const size = 128;
@@ -33,7 +34,7 @@ function createNoiseTexture(baseColor) {
 }
 
 /**
- * Create a MeshStandardMaterial styled to resemble the Zoo elephant skin.
+ * Create a MeshStandardNodeMaterial styled to resemble the Zoo elephant skin.
  * The material is intentionally lightweight but keeps the rough, leathery
  * surface and supports both smooth and low-poly shading.
  */
@@ -47,7 +48,7 @@ export function createElephantSkinMaterial(options = {}) {
 
   const texture = createNoiseTexture(color);
 
-  return new THREE.MeshStandardMaterial({
+  return createStandardMaterial({
     color: new THREE.Color(color),
     roughness,
     metalness,

@@ -10,6 +10,7 @@ import { generateLimbGeometry } from "../animals/bodyParts/LimbGenerator.js";
 import { generateEarGeometry } from "../animals/bodyParts/EarGenerator.js";
 import { ensureSkinAttributes } from "../anatomy/utils.js";
 import { makeElephantTorsoRadiusProfile } from "../animals/Elephant/ElephantTorsoProfile.js";
+import { createStandardMaterial } from "../renderkit/materialUtils.js";
 
 /**
  * Map generator names used in blueprints to actual geometry generator functions.
@@ -62,7 +63,7 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
       defaultBoneIndex: 0,
       makeNonIndexed: true,
     });
-    const material = new THREE.MeshStandardMaterial({ color: 0xaa4444 });
+    const material = createStandardMaterial({ color: 0xaa4444 });
     const mesh = new THREE.SkinnedMesh(fallbackGeometry, material);
     mesh.add(root);
     mesh.bind(skeleton);
@@ -209,7 +210,7 @@ export function buildGeometryFromBlueprint(blueprint, skeletonResult, options = 
 
   const surfaceColor = new THREE.Color(surfaceColorHex);
 
-  const material = new THREE.MeshStandardMaterial({
+  const material = createStandardMaterial({
     color: surfaceColor.getHex(),
     roughness:
       typeof surfaceConfig.roughness === "number"

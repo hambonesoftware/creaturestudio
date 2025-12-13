@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createStandardMaterial } from "../../renderkit/materialUtils.js";
 import ElephantBlueprint from "../../blueprints/ElephantBlueprint.json";
 import { ElephantFactory } from "../Elephant/ElephantFactory.js";
 
@@ -18,7 +19,7 @@ export class ElephantPen {
 
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(18, 48),
-      new THREE.MeshStandardMaterial({ color: 0x7a6d4d, roughness: 0.95, metalness: 0.05 })
+      createStandardMaterial({ color: 0x7a6d4d, roughness: 0.95, metalness: 0.05 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
