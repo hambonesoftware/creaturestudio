@@ -5,8 +5,8 @@ export function isWebGPUSupported() {
   return typeof navigator !== "undefined" && !!navigator.gpu;
 }
 
-function buildWebGPURenderer({ size, antialias, alpha }) {
-  const renderer = new WebGPURenderer({ antialias, alpha });
+function buildWebGPURenderer({ size, antialias, alpha, canvas }) {
+  const renderer = new WebGPURenderer({ antialias, alpha, canvas });
 
   // Keep color and shadow behavior aligned with the legacy WebGL path while
   // using WebGPU-only rendering.
@@ -26,7 +26,13 @@ function buildWebGPURenderer({ size, antialias, alpha }) {
  * if WebGPU is unavailable an error is thrown so the caller can present the
  * "WebGPU Required" overlay instead of silently falling back to WebGL.
  */
-export function createRenderKitRenderer({ size = { width: 800, height: 600 }, preferWebGPU = true, antialias = true, alpha = true } = {}) {
+export function createRenderKitRenderer({
+  size = { width: 800, height: 600 },
+  preferWebGPU = true,
+  antialias = true,
+  alpha = true,
+  canvas,
+} = {}) {
   if (preferWebGPU && !isWebGPUSupported()) {
     throw new Error("[renderkit] WebGPU is required but navigator.gpu is not available in this environment.");
   }
@@ -35,5 +41,5 @@ export function createRenderKitRenderer({ size = { width: 800, height: 600 }, pr
     throw new Error("[renderkit] WebGPU-only renderer invoked with preferWebGPU=false; Zoo parity forbids WebGL fallback.");
   }
 
-  return buildWebGPURenderer({ size, antialias, alpha });
+  return buildWebGPURenderer({ size, antialias, alpha, canvas });
 }
