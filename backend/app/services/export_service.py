@@ -51,6 +51,16 @@ def _compute_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _serializable_body_part_options(options: Any) -> Any:
+    """Convert body part options into JSON-serializable data."""
+
+    if hasattr(options, "model_dump"):
+        return options.model_dump()
+    if hasattr(options, "dict"):
+        return options.dict()
+    return options
+
+
 def _material_slot_from_definition(
     name: str, definition: Any, force_node_tsl: bool = False
 ) -> Dict[str, Any]:
@@ -143,7 +153,7 @@ def _body_parts_from_v2(definitions: List[BodyPartDefinition]) -> List[Dict[str,
                 "name": definition.name,
                 "generator": definition.generator,
                 "chain": definition.chain,
-                "options": definition.options,
+                "options": _serializable_body_part_options(definition.options),
             }
         )
     return parts
@@ -171,7 +181,7 @@ def _body_parts_from_v1(config: BodyPartsConfig) -> List[Dict[str, Any]]:
                     "name": key,
                     "generator": ref.generator,
                     "chain": ref.chain,
-                    "options": ref.options,
+                    "options": _serializable_body_part_options(ref.options),
                 }
             )
     for name, ref in config.extraParts.items():
@@ -180,7 +190,7 @@ def _body_parts_from_v1(config: BodyPartsConfig) -> List[Dict[str, Any]]:
                 "name": name,
                 "generator": ref.generator,
                 "chain": ref.chain,
-                "options": ref.options,
+                "options": _serializable_body_part_options(ref.options),
             }
         )
     return parts
@@ -337,12 +347,14 @@ def export_animal(
         "runtime.json": runtime_payload,
     }
 
-    # Optional traceability: include the source blueprint.
+    # Optional traceability: include the source blueprint under both a generic
+    # name and the species-specific blueprint filename Zoo expects.
     try:
         blueprint_payload = blueprint.model_dump()
     except AttributeError:
         blueprint_payload = blueprint.dict()
     payload_paths["blueprint.json"] = blueprint_payload
+    payload_paths[f"{blueprint.meta.name}Blueprint.json"] = blueprint_payload
 
     checksums: Dict[str, str] = {}
     for filename, payload in payload_paths.items():
@@ -351,6 +363,16 @@ def export_animal(
             json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
         )
         checksums[filename] = _compute_sha256(target_path)
+
+    # Include Zoo reference JS assets when available so the bundle is
+    # immediately portable back into Zoo.
+    reference_dir = settings.base_dir / "zoo_reference" / blueprint.meta.name
+    if reference_dir.is_dir():
+        for asset in reference_dir.iterdir():
+            if asset.is_file():
+                target_path = staging_dir / asset.name
+                shutil.copy2(asset, target_path)
+                checksums[asset.name] = _compute_sha256(target_path)
 
     manifest = _manifest_payload(
         version=version,

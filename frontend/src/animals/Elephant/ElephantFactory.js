@@ -1,8 +1,9 @@
 import { ElephantBlueprintAdapter } from "./ElephantBlueprintAdapter.js";
 import { resolveElephantMaterials } from "./ElephantMaterials.js";
 import { buildElephantFromBodyParts } from "../../runtime/buildElephantFromBodyParts.js";
+import { buildElephantExportBundle } from "./ElephantExportBundle.js";
 
-const DEFAULT_OPTIONS = { zooParity: true };
+const DEFAULT_OPTIONS = { zooParity: true, includeExportBundle: true };
 
 export class ElephantFactory {
   constructor(adapter = new ElephantBlueprintAdapter()) {
@@ -14,6 +15,11 @@ export class ElephantFactory {
     const compiled = this.adapter.compile(blueprint, { zooParity: mergedOptions.zooParity });
     const materials = resolveElephantMaterials(compiled.materialsIntent || {});
 
+    const exportBundle =
+      mergedOptions.includeExportBundle === false
+        ? null
+        : buildElephantExportBundle(compiled, { assets: mergedOptions.assets });
+
     const runtime = buildElephantFromBodyParts(compiled.runtime.blueprint, {
       ...mergedOptions.runtimeOptions,
       elephantMaterials: materials,
@@ -22,8 +28,16 @@ export class ElephantFactory {
     runtime.compiledSpecies = compiled;
     runtime.materials = materials;
     runtime.speciesKey = "elephant";
+    runtime.contractSnapshot = compiled.contractSnapshot;
+    runtime.canonicalDefinition = compiled.canonicalDefinition;
+    runtime.exportBundle = exportBundle;
 
     return runtime;
+  }
+
+  createExportBundle(blueprint, options = {}) {
+    const compiled = this.adapter.compile(blueprint, { zooParity: options.zooParity });
+    return buildElephantExportBundle(compiled, { assets: options.assets });
   }
 }
 

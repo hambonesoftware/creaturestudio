@@ -1,26 +1,31 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+import { createRenderKitRenderer, isWebGPUSupported } from "../renderkit/renderer.js";
 import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
 import ElephantBlueprint from "../blueprints/ElephantBlueprint.json";
 
 /**
  * Debug entry point that renders a static elephant built from ElephantBlueprint.json.
  */
-function main() {
+async function main() {
   const canvas = document.getElementById("creature-canvas");
   if (!canvas) {
     throw new Error("Missing <canvas id=\"creature-canvas\"> element.");
   }
 
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
+  if (!isWebGPUSupported()) {
+    throw new Error("WebGPU is required for debugPreviewElephant; navigator.gpu is missing.");
+  }
+
+  const { renderer, initPromise } = createRenderKitRenderer({
+    size: { width: window.innerWidth, height: window.innerHeight },
     antialias: true,
+    alpha: false,
+    canvas,
   });
-  renderer.setPixelRatio(window.devicePixelRatio || 1);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.shadowMap.enabled = true;
+
+  await initPromise;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x202025);
@@ -77,17 +82,10 @@ function main() {
 
   window.addEventListener("resize", onWindowResize);
 
-  function render() {
+  renderer.setAnimationLoop(() => {
     controls.update();
     renderer.render(scene, camera);
-  }
-
-  function animate() {
-    requestAnimationFrame(animate);
-    render();
-  }
-
-  animate();
+  });
 }
 
 if (document.readyState === "loading") {

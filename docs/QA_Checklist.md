@@ -72,6 +72,15 @@ catches most regressions around:
 
 ## 2. Automated Tests
 
+### 2.0 One-shot runner
+
+From the repo root you can run all automated QA checks (backend pytest,
+runtime smoke test, and elephant parity contract test) with:
+
+```bash
+./scripts/run_phase8_checks.sh
+```
+
 ### 2.1 Backend tests (pytest)
 
 From `CreatureStudio/backend` with your virtualenv active:
