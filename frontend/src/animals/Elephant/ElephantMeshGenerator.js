@@ -11,8 +11,8 @@ import { generateLimbGeometry } from "../bodyParts/LimbGenerator.js";
 import { ensureSkinAttributes, getBoneByName } from "../../anatomy/utils.js";
 
 import { ElephantDefinition } from "./ElephantDefinition.js";
-import { createElephantSkinMaterial } from "./ElephantSkinMaterial.js";
 import { makeElephantTorsoRadiusProfile } from "./ElephantTorsoProfile.js";
+import { resolveElephantMaterials } from "./ElephantMaterials.js";
 
 function makeEarTransformMatrix(skeleton, earRootName) {
   const earRootBone = getBoneByName(skeleton, earRootName);
@@ -296,7 +296,8 @@ export function generateElephantMesh(skeletonResult, options = {}) {
   mergedGeometry.computeBoundingBox();
   mergedGeometry.computeBoundingSphere();
 
-  const skinMaterial = createElephantSkinMaterial({ flatShading: lowPoly });
+  const materials = options.elephantMaterials || resolveElephantMaterials();
+  const skinMaterial = materials.surface;
   const mesh = new THREE.SkinnedMesh(mergedGeometry, skinMaterial);
   mesh.name = `${ElephantDefinition.name}_SkinnedMesh`;
   mesh.add(skeletonRootGroup);

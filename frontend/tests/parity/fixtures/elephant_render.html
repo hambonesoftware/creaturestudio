@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Elephant Render Fixture</title>
+    <style>
+      body {
+        margin: 0;
+        background: #dcdcdc;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      #viewport {
+        width: 800px;
+        height: 600px;
+        border: 1px solid #999;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/frontend/node_modules/three/build/three.module.js",
+          "three/examples/jsm/": "/frontend/node_modules/three/examples/jsm/",
+          "three/src/": "/frontend/node_modules/three/src/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="viewport"></canvas>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
+      import { ElephantFactory } from "../../../src/animals/Elephant/ElephantFactory.js";
+      import blueprint from "../../../src/blueprints/ElephantBlueprint.json" with { type: "json" };
+
+      const canvas = document.getElementById("viewport");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(800, 600, false);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#dcdcdc");
+
+      const camera = new THREE.PerspectiveCamera(40, 800 / 600, 0.1, 1000);
+      camera.position.set(7.5, 4.0, 8.0);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 1.5, 0);
+      controls.update();
+
+      const hemi = new THREE.HemisphereLight("#ffffff", "#757575", 0.85);
+      hemi.position.set(0, 4, 0);
+      scene.add(hemi);
+
+      const dir = new THREE.DirectionalLight("#ffffff", 0.9);
+      dir.position.set(6, 8, 4);
+      dir.castShadow = false;
+      scene.add(dir);
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(40, 40),
+        new THREE.MeshStandardMaterial({ color: "#c6c6c6", roughness: 0.95, metalness: 0.05 }),
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0;
+      scene.add(ground);
+
+      const factory = new ElephantFactory();
+      const runtime = factory.createFromBlueprint(blueprint, {
+        zooParity: true,
+        runtimeOptions: { useAnatomyV2: true },
+      });
+
+      if (runtime.root) {
+        runtime.root.position.y = 0.0;
+        scene.add(runtime.root);
+      }
+
+      camera.lookAt(new THREE.Vector3(0, 1.25, 0));
+      renderer.render(scene, camera);
+      window.__renderReady = true;
+    </script>
+  </body>
+</html>
