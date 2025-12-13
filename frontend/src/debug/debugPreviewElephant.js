@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { createStandardMaterial } from "../renderkit/materialUtils.js";
 
 import { createRenderKitRenderer, isWebGPUSupported } from "../renderkit/renderer.js";
 import { createCreatureFromBlueprint } from "../runtime/createCreatureFromBlueprint.js";
@@ -54,7 +55,7 @@ async function main() {
 
   const groundGeometry = new THREE.PlaneGeometry(40, 40);
   groundGeometry.rotateX(-Math.PI / 2);
-  const groundMaterial = new THREE.MeshStandardMaterial({
+  const groundMaterial = createStandardMaterial({
     color: 0x303030,
     roughness: 1.0,
     metalness: 0.0,

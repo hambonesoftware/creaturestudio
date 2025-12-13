@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createStandardMaterial } from "../../renderkit/materialUtils.js";
 
 const DEFAULT_OPTIONS = {
   color: 0x7788aa,
@@ -15,7 +16,7 @@ export class CatPen {
 
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(12, 36),
-      new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.85, metalness: 0.1 })
+      createStandardMaterial({ color: 0x4a4a4a, roughness: 0.85, metalness: 0.1 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -33,7 +34,7 @@ export class CatPen {
 
     const placeholder = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 1.2, 2),
-      new THREE.MeshStandardMaterial({ color: this.options.color })
+      createStandardMaterial({ color: this.options.color })
     );
     placeholder.position.set(0, 0.6, 0);
     placeholder.castShadow = true;

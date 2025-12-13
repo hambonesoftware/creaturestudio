@@ -4,6 +4,7 @@ import { buildSkeletonFromBlueprint } from './buildSkeletonFromBlueprint.js';
 import { ensureSkinAttributes } from '../anatomy/utils.js';
 import { createBehaviorControllerForBlueprint } from '../behavior/BehaviorRegistry.js';
 import { validateAnatomyV2 } from './validateAnatomyV2.js';
+import { createStandardMaterial } from '../renderkit/materialUtils.js';
 
 // Import the general anatomy generators implemented in Phase 3 from the
 // canonical V2 bodyParts location so all pipelines go through the same files.
@@ -67,7 +68,7 @@ function buildMaterialFromDefinition(definition, { fallbackColor = 0x777777 } = 
     }
   }
 
-  const material = new THREE.MeshStandardMaterial({
+  const material = createStandardMaterial({
     color,
     emissive,
     roughness: typeof safe.roughness === 'number' ? safe.roughness : 0.68,
@@ -254,7 +255,9 @@ export function buildCreatureFromBlueprintV2(blueprint, options = {}) {
       !!geometry.getAttribute('skinIndex') && !!geometry.getAttribute('skinWeight');
 
     const preparedGeometry = hasSkinAttributes
-      ? geometry.toNonIndexed()
+      ? geometry.getIndex()
+        ? geometry.toNonIndexed()
+        : geometry
       : ensureSkinAttributes(geometry, { defaultBoneIndex: Math.max(0, defaultBoneIndex), makeNonIndexed: true });
 
     const materialKey = (meta && meta.materialKey) || opts.materialKey || part.materialKey || 'surface';
